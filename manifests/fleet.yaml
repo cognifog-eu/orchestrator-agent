@@ -1,0 +1,15 @@
+
+# this file defines specific rules for fleet to apply, such as target cluster definition
+
+defaultNamespace: agones-system
+targetCustomizations:
+- name: dev
+  clusterSelector:
+  # this labels must be defined into target cluster config in order to be selected for deployment
+    matchLabels:
+      env: dev
+
+- name: prod
+  clusterSelector:
+    matchLabels:
+      env: prod

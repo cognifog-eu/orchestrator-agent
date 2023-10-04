@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ocm-description-service
+  name: ocm-description-service
+spec:
+  ports:
+    - port: 8083
+      targetPort: 8083
+  selector:
+    app: ocm-description-service
+  type: ClusterIP
+status:
+  loadBalancer: {}

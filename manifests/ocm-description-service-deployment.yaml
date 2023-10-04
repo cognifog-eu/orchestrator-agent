@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ocm-description-service
+  name: ocm-description-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ocm-description-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: ocm-description-service
+    spec:
+      serviceAccountName: agones-controller
+      automountServiceAccountToken: true
+      containers:
+      - name: ocm-description-service
+        image: registry.atosresearch.eu:18484/icos-ocm-description-svc:develop
+        imagePullPolicy: Always 
+        env:
+          - name: SERVER_PORT
+            value: "8083"
+        #     - name: REGISTRY_USERNAME
+        #       valueFrom:
+        #         secretKeyRef:
+        #           name: nexuscommonsecret
+        #           key: Username
+        #     - name: REGISTRY_PASSWORD
+        #       valueFrom:
+        #         secretKeyRef:
+        #           name: nexuscommonsecret
+        #           key: Password
+        resources: {}
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: nexusicossecret
+status: {}
