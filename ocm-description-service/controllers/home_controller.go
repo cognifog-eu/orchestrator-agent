@@ -6,6 +6,6 @@ import (
 )
 
 func (server *Server) Home(w http.ResponseWriter, r *http.Request) {
-	responses.JSON(w, http.StatusOK, "Welcome To ICOS Job Manager API")
+	responses.JSON(w, http.StatusOK, "Welcome To ICOS OCM Description Service")
 
 }

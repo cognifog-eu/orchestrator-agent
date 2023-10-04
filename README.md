@@ -1,1 +1,1 @@
-ICOS On-boarding Microservice: In charge of Registering the ICOS Controller to the Lighthouse
+ICOS OCM Description Service - Responsible for offloading Jobs to underlying OCM Orchestrator
