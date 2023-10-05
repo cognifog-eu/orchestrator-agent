@@ -1,12 +1,24 @@
 package models
 
 import (
-	"errors"
-	"time"
+	"flag"
+	"path/filepath"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	workv1 "open-cluster-management.io/api/work/v1"
+
+	// open-cluster-management
+	workclient "open-cluster-management.io/api/client/work/clientset/versioned"
 )
+
+var clientset *kubernetes.Clientset
+var clientsetWorkOper workclient.Interface
 
 type State int
 type JobType int
@@ -24,102 +36,115 @@ const (
 )
 
 type Job struct {
-	UUID           uuid.UUID      `json:"uuid"`
-	Type           JobType        `json:"type"`
-	State          State          `json:"state"`
-	AppDescription AppDescription `json:"component"` // will be an array in the future
-	Targets        []Target       // array of targets where the AppDescription is applied
+	UUID     uuid.UUID `json:"uuid"`
+	Type     JobType   `json:"type"`
+	State    State     `json:"state"`
+	Manifest Manifest  `json:"manifest"` // will be an array in the future
+	Targets  []Target  // array of targets where the manifest is applied
 	// Policies?
 	// Requirements?
 }
+
 type Target struct {
+	ID string
+	// UPC to define
 }
 
-type AppDescription struct {
-	APIVersion string `yaml:"apiVersion"`
-	Kind       string `yaml:"kind"`
-	Metadata   struct {
-		Name string `yaml:"name"`
-	} `yaml:"metadata"`
-	Spec struct {
-		Replicas int `yaml:"replicas"`
-		Selector struct {
-			MatchLabels struct {
-				Env string `yaml:"env"`
-			} `yaml:"matchLabels"`
-		} `yaml:"selector"`
-		Template struct {
-			Metadata struct {
-				Name string `yaml:"name"`
-			} `yaml:"metadata"`
-			Spec struct {
-				Containers []struct {
-					Name      string   `yaml:"name"`
-					Image     string   `yaml:"image"`
-					Command   []string `yaml:"command"`
-					Args      []string `yaml:"args"`
-					Resources struct {
-						Requests struct {
-						} `yaml:"requests"`
-						Limits struct {
-						} `yaml:"limits"`
-					} `yaml:"resources"`
-				} `yaml:"containers"`
-			} `yaml:"spec"`
-		} `yaml:"template"`
-	} `yaml:"spec"`
+type KubeConfig struct {
+	Name      string // Name of the cluster
+	Server    string // https://{ip}:{port}
+	Namespace string // "core"
+	User      string // service account
+	Token     string // pass
+	//ServiceAPIPath string			// POST /api/v1/namespaces/{namespace}/services
+	//ServiceMonitorAPIPath string	// POST /api/v1/namespaces/{namespace}/
 }
 
-type Jobs []struct {
-	Job Job
-}
+func InClusterConfig() error {
+	config, err := rest.InClusterConfig()
 
-func (j *Job) SaveJob(db *gorm.DB) (*Job, error) {
-
-	err := db.Debug().Create(&j).Error
+	// Outside of the cluster for development
 	if err != nil {
-		return &Job{}, err
+		//panic(err.Error())
+		var kubeconfig *string
+		// log.Debug("The home folder is: ", homedir.HomeDir())
+		if home := homedir.HomeDir(); home != "" {
+			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config-files/config.portainer.yaml"), "(optional) absolute path to the kubeconfig file")
+		} else {
+			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+		}
+		flag.Parse()
+		// use the current context in kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
 	}
-	return j, nil
-}
 
-func (j *Job) FindJobByUUID(db *gorm.DB, uid uint32) (*Job, error) {
-	err := db.Debug().Model(Job{}).Where("id = ?", uid).Take(&j).Error
+	// creates the clientset
+	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		return &Job{}, err
+		panic(err.Error())
 	}
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return &Job{}, errors.New("Job Not Found")
+
+	clientsetWorkOper, err = workclient.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
 	}
-	return j, err
+
+	return err
 }
 
-func (j *Job) UpdateAJob(db *gorm.DB, uid uint32) (*Job, error) {
-	db = db.Debug().Model(&Job{}).Where("id = ?", uid).Take(&Job{}).UpdateColumns(
-		map[string]interface{}{
-			"state":      j.State,
-			"created_at": time.Now(),
+func (j *Job) Execute() (string, error) {
+	var err error
+	// take unmarshalled job, convert it to manifest work
+	work := workv1.ManifestWork{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "ManifestWork",
+			APIVersion: "work.open-cluster-management.io/v1",
 		},
-	)
-	if db.Error != nil {
-		return &Job{}, db.Error
+		ObjectMeta: v1.ObjectMeta{
+			Name:         j.Manifest.Metadata.Name,
+			GenerateName: j.Manifest.Metadata.Name,
+			Namespace:    "",
+		},
+		Spec: workv1.ManifestWorkSpec{
+			Workload: workv1.ManifestsTemplate{
+				Manifests: []workv1.Manifest{
+					workv1.Manifest{
+						RawExtension: runtime.RawExtension{},
+					},
+				},
+			},
+		},
+		// ApiVersion: "work.open-cluster-management.io/v1",
+		// Kind:       "ManifestWork",
+		// Metadata: Metadata{
+		// 	Namespace: "target-cluster-id", // target_id
+		// 	Name:      "app-name",
+		// },
+		// WorkSpec: WorkSpec{
+		// 	Workload: Workload{ // the actual workload to pass to OCM
+		// 		Manifest: j.Manifest,
+		// 	},
+		// },
 	}
 
-	// This is the display the updated Job
-	err := db.Debug().Model(&Job{}).Where("id = ?", uid).Take(&j).Error
+	// map each target to ManifestWork.metadata.namespace
+	// offload job to Orchestrator in-cluster
+	// creates the in-cluster config
+	err = InClusterConfig()
 	if err != nil {
-		return &Job{}, err
+		panic(err.Error())
 	}
-	return j, nil
-}
 
-func (j *Job) DeleteAJob(db *gorm.DB, uid uint32) (int64, error) {
-
-	// db = db.Debug().Model(&Job{}).Where("id = ?", uid).Take(&Job{}).Delete(&Job{}) // debug only
-	db = db.Model(&Job{}).Where("id = ?", uid).Take(&Job{}).Delete(&Job{})
-
-	if db.Error != nil {
-		return 0, db.Error
+	for _, target := range j.Targets {
+		work.Metadata.Namespace = target.ID
+		CreateManifestWork(target, work)
 	}
-	return db.RowsAffected, nil
+
+	// retrieve the uuid and status of the job from OCM
+	// sync it with job manager
+	// return status
+	return "status", err
 }
