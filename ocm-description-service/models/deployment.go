@@ -74,16 +74,15 @@ type Resources struct {
 func CreateManifestWork(target Target, work *workv1.ManifestWork) string {
 
 	// TODO validate if work doesnt exist already
-
-	// if ExistsManifestWork(namespace, workflowName) {
-	// 	// log.Debug("ManifestWork " + workflowName + " already exists!")
-	// 	// message := "ManifestWork already exists"
-	// 	return "" //message
-	// }
+	if ExistsManifestWork(work.Namespace, work.Name) {
+		// log.Debug("ManifestWork " + manifestWorkName + " already exists!")
+		// message := "ManifestWork already exists"
+		return "" //message
+	}
 	// log.Debug(manifest)
 
 	fmt.Println("Sending manifest to OCM...")
-	manifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(target.ID).Create(context.TODO(), work, metav1.CreateOptions{})
+	manifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(target.Hostname).Create(context.TODO(), work, metav1.CreateOptions{})
 	if err != nil {
 		// debug
 		fmt.Println(manifestWork, err)
@@ -91,46 +90,46 @@ func CreateManifestWork(target Target, work *workv1.ManifestWork) string {
 		return err.Error()
 	}
 	// log.Debug(manifestWork.GetSelfLink())
-	return ""
+	return string(manifestWork.GetUID())
 }
 
-func ChequeStatusManifestWork(namespace string, workflowName string) *workv1.ManifestWork {
-	//if getManifestWorkCache(namespace, workflowName) {
+func CheckStatusManifestWork(namespace string, manifestWorkName string) string {
+	//if getManifestWorkCache(namespace, manifestWorkName) {
 	//	return true
 	//}
 	//_, err := clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 	// log.Debug("Obtaining status... ") //err.Error())
 	result, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).
-		Get(context.TODO(), workflowName, metav1.GetOptions{})
+		Get(context.TODO(), manifestWorkName, metav1.GetOptions{})
 	if err != nil {
 		// log.Debug("Error obtaining ManifestWork status")
 	}
-	//	setManifestWorkCache(namespace, workflowName)
+	//	setManifestWorkCache(namespace, manifestWorkName)
 	//}
-	return result
+	return result.Status.Conditions[0].Type // TODO update to be an array
 }
 
-func ExistsManifestWork(namespace string, workflowName string) bool {
-	//if getManifestWorkCache(namespace, workflowName) {
+func ExistsManifestWork(namespace string, manifestWorkName string) bool {
+	//if getManifestWorkCache(namespace, manifestWorkName) {
 	//	return true
 	//}
 	//_, err := clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
-	_, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).Get(context.TODO(), workflowName, metav1.GetOptions{})
-	// log.Debug("ExistsManifestWork: " + workflowName + " " + strconv.FormatBool(err == nil)) //err.Error())
+	_, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).Get(context.TODO(), manifestWorkName, metav1.GetOptions{})
+	// log.Debug("ExistsManifestWork: " + manifestWorkName + " " + strconv.FormatBool(err == nil)) //err.Error())
 	//if err == nil {
-	//	setManifestWorkCache(namespace, workflowName)
+	//	setManifestWorkCache(namespace, manifestWorkName)
 	//}
 	return err == nil
 }
 
-func DeleteManifestWork(namespace string, workflowName string) bool {
-	if !ExistsManifestWork(namespace, workflowName) {
-		// log.Debug("ServiceMonitor " + workflowName + " does not exist!")
+func DeleteManifestWork(namespace string, manifestWorkName string) bool {
+	if !ExistsManifestWork(namespace, manifestWorkName) {
+		// log.Debug("ServiceMonitor " + manifestWorkName + " does not exist!")
 		return false
 	}
 	//err := clientset.CoreV1().Services(namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
-	err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).Delete(context.TODO(), workflowName, metav1.DeleteOptions{})
-	// log.Debug("DeleteManifestWork: " + workflowName + " " + strconv.FormatBool(err == nil))
+	err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).Delete(context.TODO(), manifestWorkName, metav1.DeleteOptions{})
+	// log.Debug("DeleteManifestWork: " + manifestWorkName + " " + strconv.FormatBool(err == nil))
 	return err == nil
 }
 
