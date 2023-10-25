@@ -4,7 +4,7 @@ metadata:
   # annotations:
   #   nginx.ingress.kubernetes.io/rewrite-target: /
   name: icos-ocm-description
-  namespace: agones-system
+  namespace: open-cluster-management
 spec:
   ingressClassName: traefik
   rules:

@@ -82,7 +82,7 @@ func CreateManifestWork(target Target, work *workv1.ManifestWork) string {
 	// log.Debug(manifest)
 
 	fmt.Println("Sending manifest to OCM...")
-	manifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(target.Hostname).Create(context.TODO(), work, metav1.CreateOptions{})
+	manifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(target.NodeName).Create(context.TODO(), work, metav1.CreateOptions{})
 	if err != nil {
 		// debug
 		fmt.Println(manifestWork, err)

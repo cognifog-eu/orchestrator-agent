@@ -7,9 +7,8 @@ import (
 func (s *Server) initializeRoutes() {
 
 	// Home Route
-	s.Router.HandleFunc("/ochrestration/description/", m.SetMiddlewareLog(m.SetMiddlewareJSON(s.Home))).Methods("GET")
+	s.Router.HandleFunc("/deploy-manager", m.SetMiddlewareLog(m.SetMiddlewareJSON(s.Home))).Methods("GET")
 
 	//ocm-descriptor routes
-	// s.Router.HandleFunc("/deploy-manager/description/:id", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.GetJobByUUID)))).Methods("GET")
-	// s.Router.HandleFunc("/ochrestration/description/:id", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.GetJobByUUID)))).Methods("POST")
+	s.Router.HandleFunc("/deploy-manager/execute", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.PullJobs)))).Methods("GET")
 }

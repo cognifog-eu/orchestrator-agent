@@ -4,6 +4,7 @@ metadata:
   labels:
     app: ocm-description-service
   name: ocm-description-service
+  namespace: open-cluster-management
 spec:
   ports:
     - port: 8083

@@ -4,6 +4,7 @@ metadata:
   labels:
     app: ocm-description-service
   name: ocm-description-service
+  namespace: open-cluster-management
 spec:
   replicas: 1
   selector:
@@ -16,7 +17,7 @@ spec:
       labels:
         app: ocm-description-service
     spec:
-      serviceAccountName: agones-controller
+      serviceAccountName: cluster-manager
       automountServiceAccountToken: true
       containers:
       - name: ocm-description-service
