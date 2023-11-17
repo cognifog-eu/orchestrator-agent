@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  namespace: default
+data:
+  SERVER_PORT: {{ .Values.configMap.serverPort | quote }}
+  LIGHTHOUSE_BASE_URL: {{ .Values.configMap.lighthouseBaseUrl | quote }}
+  MATCHMAKING_URL: {{ .Values.configMap.matchmakingUrl | quote }}
+  KEYCLOAK_PUBLIC_KEY: {{ .Values.configMap.keycloakPublicKey | quote }}
+  JOBMANAGER_URL: {{ .Values.configMap.jobManagerUrl | quote }}
