@@ -4,11 +4,11 @@ metadata:
   # annotations:
   #   nginx.ingress.kubernetes.io/rewrite-target: /
   name: icos-ocm-description
-  namespace: open-cluster-management
+  namespace: default
 spec:
   ingressClassName: traefik
   rules:
-    - host: k3s.bull1.ari-imet.eu
+    - host: ocm-hub.bull1.ari-imet.eu
       http:
          paths:
            - backend:
@@ -16,9 +16,6 @@ spec:
                  name: ocm-description-service
                  port:
                    number: 8083
-             path: /ocm-description
+             path: /deploy-manager
              pathType: Prefix
-  tls:
-    - hosts:
-        - k3s.bull1.ari-imet.eu
-      secretName: k3s-bull1-secret
+

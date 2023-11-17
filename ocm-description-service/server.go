@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"icos/server/ocm-description-service/controllers"
-	"os"
 )
 
 var server = controllers.Server{}
@@ -17,7 +16,8 @@ func Init() {
 
 func Run() {
 	server.Init()
-	addr := fmt.Sprintf(":%s", os.Getenv(("SERVER_PORT")))
+	// addr := fmt.Sprintf(":%s", os.Getenv(("SERVER_PORT")))
+	addr := fmt.Sprintf(":%s", "8083")
 	server.Run(addr)
 
 }

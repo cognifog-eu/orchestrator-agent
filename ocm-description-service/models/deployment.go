@@ -2,18 +2,14 @@ package models
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	workv1 "open-cluster-management.io/api/work/v1"
 )
-
-// type ManifestWork struct {
-// 	ApiVersion string
-// 	Kind       string
-// 	Metadata   Metadata
-// 	WorkSpec   WorkSpec
-// }
 
 type Metadata struct {
 	Namespace string
@@ -71,26 +67,34 @@ type Resources struct {
 	Limits   map[string]string `yaml:"limits"`
 }
 
-func CreateManifestWork(target Target, work *workv1.ManifestWork) string {
-
+func CreateManifestWork(target Target, manifestWorkYaml string) (string, error) {
+	name := "deploy-test-"
+	namespace := target.ClusterName
 	// TODO validate if work doesnt exist already
-	if ExistsManifestWork(work.Namespace, work.Name) {
-		// log.Debug("ManifestWork " + manifestWorkName + " already exists!")
-		// message := "ManifestWork already exists"
-		return "" //message
+	if ExistsManifestWork(namespace, name) {
+		fmt.Println("ManifestWork " + name + " already exists!")
+		return "", errors.New("ManifestWork " + name + " already exists!") //message
 	}
-	// log.Debug(manifest)
+	// fmt.Println(work.Spec.Workload.Manifests)
 
-	fmt.Println("Sending manifest to OCM...")
-	manifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(target.NodeName).Create(context.TODO(), work, metav1.CreateOptions{})
+	var manifestWork *workv1.ManifestWork
+	// decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
+	decoder := scheme.Codecs.UniversalDeserializer()
+	manifestWork = &workv1.ManifestWork{}
+	err := runtime.DecodeInto(decoder, []byte(manifestWorkYaml), manifestWork)
 	if err != nil {
-		// debug
-		fmt.Println(manifestWork, err)
+		fmt.Println(err)
 		// panic(err)
-		return err.Error()
 	}
-	// log.Debug(manifestWork.GetSelfLink())
-	return string(manifestWork.GetUID())
+	fmt.Println("Sending manifest to OCM...")
+	manifestWork, err = clientsetWorkOper.WorkV1().ManifestWorks(target.ClusterName).
+		Create(context.TODO(), manifestWork, metav1.CreateOptions{})
+	if err != nil {
+		fmt.Println("ERROR: ", err)
+		// panic(err)
+		return "", errors.New(err.Error())
+	}
+	return string(manifestWork.GetUID()), err
 }
 
 func CheckStatusManifestWork(namespace string, manifestWorkName string) string {

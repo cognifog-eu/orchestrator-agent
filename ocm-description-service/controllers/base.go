@@ -1,12 +1,16 @@
 package controllers
 
 import (
-	"fmt"
+	"context"
+	"flag"
+	"icos/server/ocm-description-service/utils/logs"
 	"net/http"
-
-	"log"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type Server struct {
@@ -19,6 +23,27 @@ func (server *Server) Init() {
 }
 
 func (server *Server) Run(addr string) {
-	fmt.Printf("Listening to port %s", addr)
-	log.Fatal(http.ListenAndServe(addr, server.Router))
+	logs.Logger.Println("Listening to port " + addr + " ...")
+	handler := cors.AllowAll().Handler(server.Router)
+
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt)
+
+	go func() {
+		// init server
+		if err := http.ListenAndServe(addr, handler); err != nil {
+			if err != http.ErrServerClosed {
+				logs.Logger.Fatal(err)
+			}
+		}
+	}()
+
+	<-stop
+
+	// after stopping server
+	logs.Logger.Println("Closing connections ...")
+
+	var shutdownTimeout = flag.Duration("shutdown-timeout", 10*time.Second, "shutdown timeout (5s,5m,5h) before connections are cancelled")
+	_, cancel := context.WithTimeout(context.Background(), *shutdownTimeout)
+	defer cancel()
 }

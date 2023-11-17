@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"icos/server/ocm-description-service/utils/logs"
@@ -8,7 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -42,15 +44,16 @@ const (
 )
 
 type Job struct {
-	ID        uuid.UUID       `json:"id"`
-	UUID      uuid.UUID       `json:"uuid"` // unique across all ICOS
-	Type      JobType         `json:"type"`
-	State     State           `json:"state"`
-	JobGroup  JobGroup        `json:"group"`
-	Manifest  workv1.Manifest `json:"manifest"` // will be an array in the future
-	Targets   []Target        // array of targets where the manifest is applied
-	Locker    *bool           `json:"locker"`
-	UpdatedAt time.Time       `json:"updatedAt"`
+	ID        uuid.UUID `json:"id"`
+	UUID      uuid.UUID `json:"uuid"` // unique across all ICOS
+	Type      JobType   `json:"type,omitempty"`
+	State     State     `json:"state"`
+	JobGroup  JobGroup  `json:"group,omitempty"`
+	Manifest  string    `json:"manifest"` // represents manifests to be applied, will be an array in the future
+	Manifests []string  `json:"manifests,omitempty"`
+	Targets   []Target  // array of targets where the manifest is applied
+	Locker    *bool     `json:"locker"`
+	UpdatedAt time.Time `json:"updatedAt"`
 	// Policies?
 	// Requirements?
 }
@@ -76,8 +79,6 @@ type KubeConfig struct {
 	Namespace string // "core"
 	User      string // service account
 	Token     string // pass
-	//ServiceAPIPath string			// POST /api/v1/namespaces/{namespace}/services
-	//ServiceMonitorAPIPath string	// POST /api/v1/namespaces/{namespace}/
 }
 
 func InClusterConfig() error {
@@ -89,7 +90,7 @@ func InClusterConfig() error {
 		var kubeconfig *string
 		logs.Logger.Println("The home folder is: ", homedir.HomeDir())
 		if home := homedir.HomeDir(); home != "" {
-			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config-files/config.portainer.yaml"), "(optional) absolute path to the kubeconfig file")
+			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 		} else {
 			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 		}
@@ -117,62 +118,52 @@ func InClusterConfig() error {
 
 func (j *Job) Execute() error {
 	var err error
-
 	if len(j.Targets) > 0 {
-		// take unmarshalled job, convert it to manifest work
-		work := workv1.ManifestWork{
-			TypeMeta: v1.TypeMeta{
-				Kind:       "ManifestWork",
-				APIVersion: "work.open-cluster-management.io/v1",
-			},
-			ObjectMeta: v1.ObjectMeta{
-				Name:      j.JobGroup.AppName,
-				Namespace: "",
-			},
-			Spec: workv1.ManifestWorkSpec{
-				Workload: workv1.ManifestsTemplate{
-					Manifests: []workv1.Manifest{
-						j.Manifest,
-					},
-				},
-			},
-		}
-
-		// map each target to ManifestWork.metadata.namespace
-		// offload job to Orchestrator in-cluster
-		// creates the in-cluster config
+		// create the in-cluster config
 		err = InClusterConfig()
 		if err != nil {
-			panic(err.Error())
+			// panic(err.Error())
 		}
-		// var uid string
-
-		// NEXT ITERATION
-		// take into account that manifest:target is 1 to 1 relationship
-		// job should contain N pairs manifest:target
-		// for each target create a manifestwork within the target namespace, retrieve its uid and state
-		// for _, target := range j.Targets {
-		// 	work.Namespace = target.ID
-		// 	// retrieve the uuid and status of the job from OCM
-		// 	uid := CreateManifestWork(target, &work)
-		// 	state := CheckStatusManifestWork(target.ID, work.Name)
-		// 	j.StateMapper(state)
-		// }
-
-		// IT1 ONLY
-		work.Namespace = j.Targets[0].NodeName
-		// retrieve the uuid and status of the job from OCM
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
-		logs.Logger.Println("Target data. Node Name: " + j.Targets[0].NodeName + " Cluster Name: " + j.Targets[0].ClusterName)
-		newUUID := CreateManifestWork(j.Targets[0], &work)
-		logs.Logger.Println("Work UUID is: " + newUUID)
-		j.UUID = uuid.MustParse(newUUID)
-		j.StateMapper(CheckStatusManifestWork(j.Targets[0].NodeName, work.Name))
-		// lock the job so other instance won't take it
-		b := new(bool)
-		*b = true
-		j.Locker = b
+		// create valid ManifestWork object
+		manifestWork := j.CreateWork()
+		// send ManifestWork to OCM API Server
+		manifestWork, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWork, metav1.CreateOptions{})
+		// newUUID, err := CreateManifestWork(j.Targets[0], string(work))
+		if err != nil {
+			// panic(err.Error())
+			logs.Logger.Println("error occured: ", err)
+		} // retrieve the UID created by OCM
+		newUUID := string(manifestWork.GetUID())
+		// // retrieve the uuid and status of the job from OCM
+		if newUUID != "" {
+			// state := CheckStatusManifestWork(j.Targets[0].ClusterName, string(work))
+			appliedManifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Get(context.TODO(), manifestWork.Name, metav1.GetOptions{})
+			if err != nil {
+				logs.Logger.Println("Error obtaining ManifestWork status")
+			}
+			logs.Logger.Println("manifestWork uid: ", newUUID)
 
+			// NEXT ITERATION
+			// take into account that manifest:target is 1 to 1 relationship
+			// job should contain N pairs manifest:target
+			// for each target create a manifestwork within the target namespace, retrieve its uid and state
+			// for _, target := range j.Targets {
+			// 	work.Namespace = target.ID
+			// 	// retrieve the uuid and status of the job from OCM
+			// 	uid := CreateManifestWork(target, &work)
+			// 	state := CheckStatusManifestWork(target.ID, work.Name)
+			// 	j.StateMapper(state)
+			// }
+
+			logs.Logger.Println("Work UUID is: " + newUUID)
+			j.UUID = uuid.MustParse(newUUID)
+			j.StateMapper(appliedManifestWork.Status)
+			// lock the job so other instance won't take it
+			b := new(bool)
+			*b = true
+			j.Locker = b
+		}
 	} else {
 		err = errors.New("Target Cannot be empty")
 	}
@@ -180,8 +171,12 @@ func (j *Job) Execute() error {
 	return err
 }
 
-func (j *Job) StateMapper(state string) {
-	switch jobState := state; jobState {
+func (j *Job) ManifestMapper(manifest string) {
+	j.Manifests = append(j.Manifests, manifest)
+}
+
+func (j *Job) StateMapper(state workv1.ManifestWorkStatus) {
+	switch jobState := state.Conditions[len(state.Conditions)-1].Type; jobState {
 	case "Progressing":
 		j.State = Progressing
 	case "Available":
@@ -191,4 +186,29 @@ func (j *Job) StateMapper(state string) {
 	default:
 		j.State = Created
 	}
+}
+
+func (j *Job) CreateWork() *workv1.ManifestWork {
+	var manifest *workv1.Manifest
+	yaml.Unmarshal([]byte(j.Manifest), &manifest)
+	work := workv1.ManifestWork{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ManifestWork",
+			APIVersion: "work.open-cluster-management.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			// Name:         j.JobGroup.AppName,
+			GenerateName: "deploy-app-", // TODO change
+			Namespace:    j.Targets[0].ClusterName,
+		},
+		Spec: workv1.ManifestWorkSpec{
+			Workload: workv1.ManifestsTemplate{
+				Manifests: []workv1.Manifest{
+					*manifest,
+				},
+			},
+		},
+	}
+
+	return &work
 }

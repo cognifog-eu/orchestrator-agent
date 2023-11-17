@@ -4,7 +4,7 @@ metadata:
   labels:
     app: ocm-description-service
   name: ocm-description-service
-  namespace: open-cluster-management
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -17,7 +17,7 @@ spec:
       labels:
         app: ocm-description-service
     spec:
-      serviceAccountName: cluster-manager
+      serviceAccountName: manifestwork-editor-service-account
       automountServiceAccountToken: true
       containers:
       - name: ocm-description-service

@@ -8,13 +8,14 @@ import (
 	"icos/server/ocm-description-service/utils/logs"
 	"io"
 	"net/http"
+	"os"
 )
 
-const (
-	lighthouseBaseURL  = "http://lighthouse.icos-project.eu:8080"
+var (
+	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL")
+	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
 	apiV3              = "/api/v3"
-	matchmackerBaseURL = ""
-	jobmanagerBaseURL  = "http://192.168.137.201/jobmanager"
+	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
 )
 
 func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
@@ -44,14 +45,13 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 		logs.Logger.Println("ERROR " + err.Error())
 		responses.ERROR(w, http.StatusBadRequest, err)
 	}
-	logs.Logger.Println("Jobs body: " + string(bodyJobs))
+	logs.Logger.Println("Job's body: " + string(bodyJobs))
 	err = json.Unmarshal(bodyJobs, &jobs)
 	if err != nil {
 		logs.Logger.Println("ERROR " + err.Error())
 		responses.ERROR(w, respJobs.StatusCode, err)
 		return
 	}
-
 	// for each job, call exec
 	for _, job := range jobs {
 		// execute job -> creates manifestWork and deploy it, update UID, State, locker=false -> unlocked
@@ -62,9 +62,10 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			// keep executing
 			// return
 		} else {
-			// HTTP PUT to update UUIDs into JOB MANAGER -> updateJob call
+			// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
 			jobBody, err := json.Marshal(job)
-			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobs/"+job.UUID.String(), bytes.NewReader(jobBody))
+			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
+			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
 			if err != nil {
 				responses.ERROR(w, http.StatusUnprocessableEntity, err)
 				return
@@ -82,5 +83,6 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+	// TODO: update the jobs list with updated jobs
 	responses.JSON(w, http.StatusOK, jobs)
 }
