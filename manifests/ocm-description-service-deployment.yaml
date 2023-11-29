@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: orch-agent-service
+  name: orch-agent-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orch-agent-service
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: orch-agent-service
+    spec:
+      serviceAccountName: manifestwork-editor-service-account
+      automountServiceAccountToken: true
+      containers:
+      - name: orch-agent-service
+        image: registry.atosresearch.eu:18484/cognifog-orch-agent-svc:develop
+        imagePullPolicy: Always 
+        env:
+          - name: SERVER_PORT
+            value: "8083"
+        #     - name: REGISTRY_USERNAME
+        #       valueFrom:
+        #         secretKeyRef:
+        #           name: nexuscommonsecret
+        #           key: Username
+        #     - name: REGISTRY_PASSWORD
+        #       valueFrom:
+        #         secretKeyRef:
+        #           name: nexuscommonsecret
+        #           key: Password
+        resources: {}
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: nexuscognifogsecret
+status: {}

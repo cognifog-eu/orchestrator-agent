@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  # annotations:
+  #   nginx.ingress.kubernetes.io/rewrite-target: /
+  name: cognifog-orch-agent
+  namespace: default
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: ocm-hub.bull1.ari-imet.eu
+      http:
+         paths:
+           - backend:
+               service:
+                 name: orch-agent-service
+                 port:
+                   number: 8083
+             path: /deploy-manager
+             pathType: Prefix
+
