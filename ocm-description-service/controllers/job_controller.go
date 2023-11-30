@@ -78,7 +78,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			resp, err := client2.Do(reqState)
 			if err != nil {
 				logs.Logger.Println("Error occurred during Job details notification...")
-				// responses.ERROR(w, resp.StatusCode, err)
+				responses.ERROR(w, resp.StatusCode, err)
 				// retry ??
 				// keep executing
 				// return
