@@ -22,6 +22,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 
 	jobs := []models.Job{}
 	// get jobs with specific state; CREATED for now
+	logs.Logger.Println("Requesting Jobs...")
 	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"/jobs/executable", http.NoBody)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
@@ -58,11 +59,13 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 		logs.Logger.Println("Executing Job: " + job.ID.String())
 		err := job.Execute()
 		if err != nil {
-			responses.ERROR(w, http.StatusUnprocessableEntity, err)
+			// responses.ERROR(w, http.StatusUnprocessableEntity, err)
+			logs.Logger.Println("Error occurred during Job execution...")
 			// keep executing
 			// return
 		} else {
 			// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
+			logs.Logger.Println("Job executed, sending details to Job Manager...")
 			jobBody, err := json.Marshal(job)
 			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
@@ -74,7 +77,8 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			client2 := &http.Client{}
 			resp, err := client2.Do(reqState)
 			if err != nil {
-				responses.ERROR(w, resp.StatusCode, err)
+				logs.Logger.Println("Error occurred during Job details notification...")
+				// responses.ERROR(w, resp.StatusCode, err)
 				// retry ??
 				// keep executing
 				// return
