@@ -33,7 +33,7 @@ const (
 	// 2. Progressing represents workload in ManifestWork is being applied on managed cluster.
 	// 3. Available represents workload in ManifestWork exists on the managed cluster.
 	// 4. Degraded represents the current state of workload does not match the desired
-	Created State = iota + 1
+	Applied State = iota + 1
 	Progressing
 	Available
 	Degraded
@@ -45,7 +45,7 @@ const (
 
 type Job struct {
 	ID        uuid.UUID `json:"id"`
-	UUID      uuid.UUID `json:"uuid"` // unique across all ICOS
+	UUID      uuid.UUID `json:"uuid"` // unique across all ICOS, represents resource UUID
 	Type      JobType   `json:"type,omitempty"`
 	State     State     `json:"state"`
 	JobGroup  JobGroup  `json:"group,omitempty"`
@@ -54,6 +54,7 @@ type Job struct {
 	Targets   []Target  // array of targets where the manifest is applied
 	Locker    *bool     `json:"locker"`
 	UpdatedAt time.Time `json:"updatedAt"`
+	Resource  Resource  `json:"resource"`
 	// Policies?
 	// Requirements?
 }
@@ -90,7 +91,7 @@ func InClusterConfig() error {
 		var kubeconfig *string
 		logs.Logger.Println("The home folder is: ", homedir.HomeDir())
 		if home := homedir.HomeDir(); home != "" {
-			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "C:\\Users\\a880237\\.kube\\config")
 		} else {
 			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 		}
@@ -116,59 +117,62 @@ func InClusterConfig() error {
 	return err
 }
 
-func (j *Job) Execute() error {
+func Execute(j *Job) (*Job, error) {
 	var err error
 	if len(j.Targets) > 0 {
-		// create the in-cluster config
-		err = InClusterConfig()
-		if err != nil {
-			// panic(err.Error())
-		}
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
 		// create valid ManifestWork object
-		manifestWork := j.CreateWork()
+		manifestWork := CreateWork(j)
 		// send ManifestWork to OCM API Server
 		manifestWork, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWork, metav1.CreateOptions{})
-		// newUUID, err := CreateManifestWork(j.Targets[0], string(work))
 		if err != nil {
+			// if error, manifeswork not created!
 			// panic(err.Error())
+			j.Resource.Status.Conditions = append(j.Resource.Status.Conditions,
+				metav1.Condition{
+					Type:    workv1.WorkDegraded,
+					Status:  metav1.StatusFailure,
+					Message: "manifestworks.work.open-cluster-management.io" + j.Resource.ManifestName + "already exists",
+				})
 			logs.Logger.Println("error occured: ", err)
 		} // retrieve the UID created by OCM
 		newUUID := string(manifestWork.GetUID())
-		// // retrieve the uuid and status of the job from OCM
+		// retrieve the uuid and status of the job from OCM
 		if newUUID != "" {
-			// state := CheckStatusManifestWork(j.Targets[0].ClusterName, string(work))
 			appliedManifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Get(context.TODO(), manifestWork.Name, metav1.GetOptions{})
-			if err != nil {
-				logs.Logger.Println("Error obtaining ManifestWork status")
+			logs.Logger.Println(appliedManifestWork.Name)
+			// skip if errors and set to Degraded
+			if err != nil || appliedManifestWork == nil {
+				logs.Logger.Println("Error obtaining applied ManifestWork status")
+				j.State = Degraded
+			} else {
+				logs.Logger.Println("manifestWork uid: ", newUUID)
+				// TODO improve
+				j.UUID = uuid.MustParse(newUUID)
+				// if conditions empty skip state mapper,
+				if len(appliedManifestWork.Status.Conditions) != 0 {
+					j.StateMapper(appliedManifestWork.Status)
+				} else {
+					// assumption: manifestwork is in progress
+					j.State = Progressing
+				}
+				// lock the job so other instance won't take it -> TODO: race condition is still possible!
+				b := new(bool)
+				*b = true
+				j.Locker = b
+				j.Resource.ID = j.UUID
+				j.Resource.ManifestName = appliedManifestWork.Name
+				// populate conditions slice
+				for _, condition := range appliedManifestWork.Status.Conditions {
+					j.Resource.Status.Conditions = append(j.Resource.Status.Conditions, condition)
+				}
 			}
-			logs.Logger.Println("manifestWork uid: ", newUUID)
-
-			// NEXT ITERATION
-			// take into account that manifest:target is 1 to 1 relationship
-			// job should contain N pairs manifest:target
-			// for each target create a manifestwork within the target namespace, retrieve its uid and state
-			// for _, target := range j.Targets {
-			// 	work.Namespace = target.ID
-			// 	// retrieve the uuid and status of the job from OCM
-			// 	uid := CreateManifestWork(target, &work)
-			// 	state := CheckStatusManifestWork(target.ID, work.Name)
-			// 	j.StateMapper(state)
-			// }
-
-			logs.Logger.Println("Work UUID is: " + newUUID)
-			j.UUID = uuid.MustParse(newUUID)
-			j.StateMapper(appliedManifestWork.Status)
-			// lock the job so other instance won't take it
-			b := new(bool)
-			*b = true
-			j.Locker = b
 		}
 	} else {
 		err = errors.New("Target Cannot be empty")
 	}
 	// return status, this should be a map[uid,state:target]
-	return err
+	return j, err
 }
 
 func (j *Job) ManifestMapper(manifest string) {
@@ -176,7 +180,11 @@ func (j *Job) ManifestMapper(manifest string) {
 }
 
 func (j *Job) StateMapper(state workv1.ManifestWorkStatus) {
-	switch jobState := state.Conditions[len(state.Conditions)-1].Type; jobState {
+	offset := len(state.Conditions)
+	if len(state.Conditions) > 1 {
+		offset = len(state.Conditions) - 1
+	}
+	switch jobState := state.Conditions[offset].Type; jobState {
 	case "Progressing":
 		j.State = Progressing
 	case "Available":
@@ -184,11 +192,11 @@ func (j *Job) StateMapper(state workv1.ManifestWorkStatus) {
 	case "Degraded":
 		j.State = Degraded
 	default:
-		j.State = Created
+		j.State = Applied
 	}
 }
 
-func (j *Job) CreateWork() *workv1.ManifestWork {
+func CreateWork(j *Job) *workv1.ManifestWork {
 	var manifest *workv1.Manifest
 	yaml.Unmarshal([]byte(j.Manifest), &manifest)
 	work := workv1.ManifestWork{
@@ -197,9 +205,9 @@ func (j *Job) CreateWork() *workv1.ManifestWork {
 			APIVersion: "work.open-cluster-management.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			// Name:         j.JobGroup.AppName,
-			GenerateName: "deploy-app-", // TODO change
-			Namespace:    j.Targets[0].ClusterName,
+			Name: j.Resource.ManifestName,
+			// GenerateName: "deploy-app-", // TODO change
+			Namespace: j.Targets[0].ClusterName,
 		},
 		Spec: workv1.ManifestWorkSpec{
 			Workload: workv1.ManifestsTemplate{

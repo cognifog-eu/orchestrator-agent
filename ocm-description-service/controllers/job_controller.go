@@ -23,7 +23,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 	jobs := []models.Job{}
 	// get jobs with specific state; CREATED for now
 	logs.Logger.Println("Requesting Jobs...")
-	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"jobmanager/jobs/executable", http.NoBody)
+	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"/jobmanager/jobs/executable", http.NoBody)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
@@ -45,6 +45,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logs.Logger.Println("ERROR " + err.Error())
 		responses.ERROR(w, http.StatusBadRequest, err)
+		return
 	}
 	logs.Logger.Println("Job's body: " + string(bodyJobs))
 	err = json.Unmarshal(bodyJobs, &jobs)
@@ -53,21 +54,28 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 		responses.ERROR(w, respJobs.StatusCode, err)
 		return
 	}
+
+	// create the in-cluster config
+	err = models.InClusterConfig()
+	if err != nil {
+		logs.Logger.Println("Kubeconfig error occured", err)
+	}
 	// for each job, call exec
 	for _, job := range jobs {
 		// execute job -> creates manifestWork and deploy it, update UID, State, locker=false -> unlocked
 		logs.Logger.Println("Executing Job: " + job.ID.String())
-		err := job.Execute()
+		job, err := models.Execute(&job)
 		if err != nil {
 			// responses.ERROR(w, http.StatusUnprocessableEntity, err)
 			logs.Logger.Println("Error occurred during Job execution...")
 			// keep executing
-			// return
 		} else {
 			// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
 			logs.Logger.Println("Job executed, sending details to Job Manager...")
 			jobBody, err := json.Marshal(job)
-			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
+			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
+			query := reqState.URL.Query()
+			query.Add("uuid", job.UUID.String())
 			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
 			if err != nil {
 				responses.ERROR(w, http.StatusUnprocessableEntity, err)
@@ -79,9 +87,8 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				logs.Logger.Println("Error occurred during Job details notification...")
 				responses.ERROR(w, resp.StatusCode, err)
-				// retry ??
+				// TODO retry? rollback?
 				// keep executing
-				// return
 			}
 			defer reqState.Body.Close()
 		}
