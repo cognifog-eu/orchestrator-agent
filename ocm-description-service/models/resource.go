@@ -4,67 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	workv1 "open-cluster-management.io/api/work/v1"
 )
 
-type Metadata struct {
-	Namespace string
-	Name      string
+type Resource struct {
+	ID           uuid.UUID `json:"id"`
+	ManifestName string    `json:"resource_name"`
+	NodeTarget   string    `json:"node_target"`
+	Status       Status    `json:"status"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
-type WorkSpec struct {
-	Workload Workload
-}
-
-type Workload struct {
-	Manifest Manifest // TODO will be an array
-}
-
-type Manifest struct {
-	workv1.Manifest
-	ApiVersion string
-	Kind       string
-	Metadata   Metadata
-	Spec       Spec
-}
-
-type Spec struct {
-	Selector Selector
-	Template Template
-}
-
-type Selector struct {
-	MatchLabels map[string]string `yaml:"MatchLabels"`
-}
-
-type Template struct {
-	TemplateMetadata TemplateMetadata
-	TemplateSpec     TemplateSpec
-}
-
-type TemplateMetadata struct {
-	Labels map[string]string `yaml:"labels"`
-}
-
-type TemplateSpec struct {
-	Containers []Container
-}
-
-type Container struct {
-	Name      string    `yaml:"name"`
-	Image     string    `yaml:"image"`
-	Command   []string  `yaml:"command"`
-	Args      []string  `yaml:"args"`
-	Resources Resources `yaml:"resources"`
-}
-
-type Resources struct {
-	Requests map[string]string `yaml:"requests"`
-	Limits   map[string]string `yaml:"limits"`
+type Status struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func CreateManifestWork(target Target, manifestWorkYaml string) (string, error) {
@@ -97,7 +55,21 @@ func CreateManifestWork(target Target, manifestWorkYaml string) (string, error) 
 	return string(manifestWork.GetUID()), err
 }
 
-func CheckStatusManifestWork(namespace string, manifestWorkName string) string {
+func GetManifestWork(namespace string, manifestWorkName string) (*workv1.ManifestWork, error) {
+	//if getManifestWorkCache(namespace, manifestWorkName) {
+	//	return true
+	//}
+	//_, err := clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	manifest, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).
+		Get(context.TODO(), manifestWorkName, metav1.GetOptions{})
+	// log.Debug("ExistsManifestWork: " + manifestWorkName + " " + strconv.FormatBool(err == nil)) //err.Error())
+	if err == nil {
+		fmt.Println("ERROR: ", err)
+	}
+	return manifest, err
+}
+
+func CheckStatusManifestWork(namespace string, manifestWorkName string) *workv1.ManifestWorkStatus {
 	//if getManifestWorkCache(namespace, manifestWorkName) {
 	//	return true
 	//}
@@ -106,11 +78,11 @@ func CheckStatusManifestWork(namespace string, manifestWorkName string) string {
 	result, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).
 		Get(context.TODO(), manifestWorkName, metav1.GetOptions{})
 	if err != nil {
-		// log.Debug("Error obtaining ManifestWork status")
+		fmt.Println("Error obtaining ManifestWork status")
 	}
 	//	setManifestWorkCache(namespace, manifestWorkName)
 	//}
-	return result.Status.Conditions[0].Type // TODO update to be an array
+	return &result.Status // TODO update to be an array
 }
 
 func ExistsManifestWork(namespace string, manifestWorkName string) bool {
