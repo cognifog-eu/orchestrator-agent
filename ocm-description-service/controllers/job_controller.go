@@ -3,6 +3,7 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"icos/server/ocm-description-service/models"
 	"icos/server/ocm-description-service/responses"
 	"icos/server/ocm-description-service/utils/logs"
@@ -84,6 +85,8 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			// do request
 			client2 := &http.Client{}
 			resp, err := client2.Do(reqState)
+			fmt.Println("Update Job Request " + logs.FormatRequest(reqState))
+			logs.Logger.Println("Update Job Response " + resp.Status)
 			if err != nil {
 				logs.Logger.Println("Error occurred during Job details notification...")
 				responses.ERROR(w, resp.StatusCode, err)

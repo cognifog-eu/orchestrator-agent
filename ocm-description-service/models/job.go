@@ -139,6 +139,8 @@ func Execute(j *Job) (*Job, error) {
 		newUUID := string(manifestWork.GetUID())
 		// retrieve the uuid and status of the job from OCM
 		if newUUID != "" {
+			// temporal sleep to ensure status is obtained during deploy
+			time.Sleep(time.Second * 10)
 			appliedManifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Get(context.TODO(), manifestWork.Name, metav1.GetOptions{})
 			logs.Logger.Println(appliedManifestWork.Name)
 			// skip if errors and set to Degraded
@@ -167,6 +169,8 @@ func Execute(j *Job) (*Job, error) {
 					j.Resource.Status.Conditions = append(j.Resource.Status.Conditions, condition)
 				}
 			}
+		} else {
+			logs.Logger.Println("Manifest UID could not be retrieved")
 		}
 	} else {
 		err = errors.New("Target Cannot be empty")
