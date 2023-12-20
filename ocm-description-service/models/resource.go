@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +12,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	workv1 "open-cluster-management.io/api/work/v1"
+)
+
+var (
+	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL")
+	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
+	apiV3              = "/api/v3"
+	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
 )
 
 type Resource struct {
@@ -116,4 +124,36 @@ func ListManifestWork(namespace string) *workv1.ManifestWorkList {
 		// log.Debug("Error obtaining ManifestWorkList")
 	}
 	return manifestlist
+}
+
+func ResourceSync() ([]Resource, error) {
+	var err error
+	var resources []Resource
+	// get all manifestworks
+	var manifestStatus *workv1.ManifestWorkStatus
+	// var managedClusters clusterv1.ManagedClusterList
+	managedClusters, err := clientsetClusterOper.ClusterV1().ManagedClusters().List(context.TODO(), metav1.ListOptions{})
+	for _, managedCluster := range managedClusters.Items {
+		allManifestWorks := ListManifestWork(managedCluster.Name)
+		// for each manifestwork
+		if len(allManifestWorks.Items) > 0 {
+			for _, manifestWork := range allManifestWorks.Items {
+				// get status
+				manifestStatus = &manifestWork.Status
+				// find job with the corresponding UID, should I assume it exists?
+				manifestUID := uuid.MustParse(string(string(manifestWork.UID)))
+				resource := Resource{
+					ID:           manifestUID,
+					ManifestName: manifestWork.Name,
+					Status: Status{
+						manifestStatus.Conditions,
+					},
+				}
+				resources = append(resources, resource)
+			}
+		} else {
+			fmt.Println("No Resources were found during sync up process for cluster: " + managedCluster.Name)
+		}
+	}
+	return resources, err
 }

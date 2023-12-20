@@ -18,11 +18,13 @@ import (
 	workv1 "open-cluster-management.io/api/work/v1"
 
 	// open-cluster-management
+	clusterclient "open-cluster-management.io/api/client/cluster/clientset/versioned"
 	workclient "open-cluster-management.io/api/client/work/clientset/versioned"
 )
 
 var clientset *kubernetes.Clientset
 var clientsetWorkOper workclient.Interface
+var clientsetClusterOper clusterclient.Interface
 
 type State int
 type JobType int
@@ -110,6 +112,11 @@ func InClusterConfig() error {
 	}
 
 	clientsetWorkOper, err = workclient.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	clientsetClusterOper, err = clusterclient.NewForConfig(config)
 	if err != nil {
 		panic(err.Error())
 	}

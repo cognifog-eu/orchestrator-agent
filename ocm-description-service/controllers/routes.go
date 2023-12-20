@@ -14,4 +14,6 @@ func (s *Server) initializeRoutes() {
 	s.Router.HandleFunc("/deploy-manager/execute", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.PullJobs)))).Methods("GET")
 	// get resource (status)
 	s.Router.HandleFunc("/deploy-manager/resource", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.GetResourceStatus)))).Methods("GET")
+	// trigger resource syncup
+	s.Router.HandleFunc("/deploy-manager/resource/sync", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.StartSyncUp)))).Methods("GET")
 }
