@@ -74,6 +74,10 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
 			logs.Logger.Println("Job executed, sending details to Job Manager...")
 			jobBody, err := json.Marshal(job)
+			if err != nil {
+				logs.Logger.Println("Could not unmarshall job...", err)
+			}
+
 			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			query := reqState.URL.Query()
 			query.Add("uuid", job.UUID.String())
