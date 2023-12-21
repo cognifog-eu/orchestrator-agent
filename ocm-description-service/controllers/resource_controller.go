@@ -73,7 +73,7 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logs.Logger.Println("Could not unmarshall resource...", err)
 		}
-		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
+		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
 		if err != nil {
 			responses.ERROR(w, http.StatusUnprocessableEntity, err)
 			return
