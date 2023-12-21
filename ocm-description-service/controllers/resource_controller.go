@@ -73,24 +73,25 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logs.Logger.Println("Could not unmarshall resource...", err)
 		}
-		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
-		query := reqState.URL.Query()
-		query.Add("uuid", resource.ID.String())
-		reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
+		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
 		if err != nil {
 			responses.ERROR(w, http.StatusUnprocessableEntity, err)
 			return
 		}
+		query := reqState.URL.Query()
+		query.Add("uuid", resource.ID.String())
+		reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
+
 		// do request
 		client2 := &http.Client{}
 		resp, err := client2.Do(reqState)
-		fmt.Println("Update Job Request " + logs.FormatRequest(reqState))
-		logs.Logger.Println("Update Job Response " + resp.Status)
 		if err != nil {
 			logs.Logger.Println("Error occurred during Job details notification...")
 			// responses.ERROR(w, resp.StatusCode, err)
 			// keep executing
 		}
+		fmt.Println("Update Job Request " + logs.FormatRequest(reqState))
+		logs.Logger.Println("Update Job Response " + resp.Status)
 		defer reqState.Body.Close()
 	}
 	responses.JSON(w, http.StatusOK, nil)

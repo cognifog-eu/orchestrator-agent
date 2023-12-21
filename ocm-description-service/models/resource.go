@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL")
+	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
 	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
 	apiV3              = "/api/v3"
 	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
@@ -133,6 +133,9 @@ func ResourceSync() ([]Resource, error) {
 	var manifestStatus *workv1.ManifestWorkStatus
 	// var managedClusters clusterv1.ManagedClusterList
 	managedClusters, err := clientsetClusterOper.ClusterV1().ManagedClusters().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		fmt.Println("Error obtaining managed clusters")
+	}
 	for _, managedCluster := range managedClusters.Items {
 		allManifestWorks := ListManifestWork(managedCluster.Name)
 		// for each manifestwork
