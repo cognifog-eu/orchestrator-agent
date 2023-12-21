@@ -88,7 +88,7 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		logs.Logger.Println("Update Job Response " + resp.Status)
 		if err != nil {
 			logs.Logger.Println("Error occurred during Job details notification...")
-			responses.ERROR(w, resp.StatusCode, err)
+			// responses.ERROR(w, resp.StatusCode, err)
 			// keep executing
 		}
 		defer reqState.Body.Close()
