@@ -69,6 +69,7 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		// update its status into JM (PUT)
 		// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
 		logs.Logger.Println("Sending status details to Job Manager...")
+		fmt.Printf("Status details: %#v", resource)
 		resourceBody, err := json.Marshal(resource)
 		if err != nil {
 			logs.Logger.Println("Could not unmarshall resource...", err)
@@ -90,8 +91,8 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 			// responses.ERROR(w, resp.StatusCode, err)
 			// keep executing
 		}
-		fmt.Println("Update Job Request " + logs.FormatRequest(reqState))
-		logs.Logger.Println("Update Job Response " + resp.Status)
+		logs.Logger.Println("Update Resource Status Request " + logs.FormatRequest(reqState))
+		logs.Logger.Println("Update Resource Status Response " + resp.Status)
 		defer reqState.Body.Close()
 	}
 	responses.JSON(w, http.StatusOK, nil)

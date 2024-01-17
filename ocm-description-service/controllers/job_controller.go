@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL")
+	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
 	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
 	apiV3              = "/api/v3"
 	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
@@ -65,19 +65,20 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		// execute job -> creates manifestWork and deploy it, update UID, State, locker=false -> unlocked
 		logs.Logger.Println("Executing Job: " + job.ID.String())
-		job, err := models.Execute(&job)
-		if err != nil {
-			// responses.ERROR(w, http.StatusUnprocessableEntity, err)
-			logs.Logger.Println("Error occurred during Job execution...")
-			// keep executing
+		if len(job.Targets) < 1 {
+			logs.Logger.Println("No target were provided...")
 		} else {
+			job, err := models.Execute(&job)
+			if err != nil {
+				logs.Logger.Println("Error occurred during Job execution...")
+			}
 			// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
 			logs.Logger.Println("Job executed, sending details to Job Manager...")
 			jobBody, err := json.Marshal(job)
 			if err != nil {
 				logs.Logger.Println("Could not unmarshall job...", err)
 			}
-
+			fmt.Printf("Job details: %#v", job)
 			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			query := reqState.URL.Query()
 			query.Add("uuid", job.UUID.String())
@@ -99,7 +100,6 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			}
 			defer reqState.Body.Close()
 		}
-
 	}
 	// TODO: update the jobs list with updated jobs
 	responses.JSON(w, http.StatusOK, jobs)

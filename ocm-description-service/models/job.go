@@ -2,14 +2,15 @@ package models
 
 import (
 	"context"
-	"errors"
 	"flag"
+	"fmt"
 	"icos/server/ocm-description-service/utils/logs"
 	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -43,7 +44,18 @@ const (
 	CreateDeployment JobType = iota + 1
 	GetDeployment
 	DeleteDeployment
+
+	ScaleIn
+	ScaleOut
 )
+
+var JobTypeFromString = map[string]JobType{
+	"CreateDeployment": CreateDeployment,
+	"GetDeployment":    GetDeployment,
+	"DeleteDeployment": DeleteDeployment,
+	"ScaleIn":          ScaleIn,
+	"ScaleOut":         ScaleOut,
+}
 
 type Job struct {
 	ID        uuid.UUID `json:"id"`
@@ -59,6 +71,10 @@ type Job struct {
 	Resource  Resource  `json:"resource"`
 	// Policies?
 	// Requirements?
+}
+
+func JobTypeIsRecoveryAction(value int) bool {
+	return int(ScaleIn) <= value && value >= int(ScaleOut)
 }
 
 type Target struct {
@@ -126,7 +142,9 @@ func InClusterConfig() error {
 
 func Execute(j *Job) (*Job, error) {
 	var err error
-	if len(j.Targets) > 0 {
+	resUUID := j.UUID.String()
+	// if execution requires the creation of a new manifest work
+	if !JobTypeIsRecoveryAction(int(j.Type)) {
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
 		// create valid ManifestWork object
 		manifestWork := CreateWork(j)
@@ -143,44 +161,47 @@ func Execute(j *Job) (*Job, error) {
 				})
 			logs.Logger.Println("error occured: ", err)
 		} // retrieve the UID created by OCM
-		newUUID := string(manifestWork.GetUID())
-		// retrieve the uuid and status of the job from OCM
-		if newUUID != "" {
-			// temporal sleep to ensure status is obtained during deploy
-			time.Sleep(time.Second * 10)
-			appliedManifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Get(context.TODO(), manifestWork.Name, metav1.GetOptions{})
-			logs.Logger.Println(appliedManifestWork.Name)
-			// skip if errors and set to Degraded
-			if err != nil || appliedManifestWork == nil {
-				logs.Logger.Println("Error obtaining applied ManifestWork status")
-				j.State = Degraded
-			} else {
-				logs.Logger.Println("manifestWork uid: ", newUUID)
-				// TODO improve
-				j.UUID = uuid.MustParse(newUUID)
-				// if conditions empty skip state mapper,
-				if len(appliedManifestWork.Status.Conditions) != 0 {
-					j.StateMapper(appliedManifestWork.Status)
-				} else {
-					// assumption: manifestwork is in progress
-					j.State = Progressing
-				}
-				// lock the job so other instance won't take it -> TODO: race condition is still possible!
-				b := new(bool)
-				*b = true
-				j.Locker = b
-				j.Resource.ID = j.UUID
-				j.Resource.ManifestName = appliedManifestWork.Name
-				// populate conditions slice
-				for _, condition := range appliedManifestWork.Status.Conditions {
-					j.Resource.Status.Conditions = append(j.Resource.Status.Conditions, condition)
-				}
-			}
+		resUUID = string(manifestWork.GetUID())
+	}
+	// retrieve the uuid and status of the applied manifest from OCM
+	if resUUID != "" {
+		// temporal sleep to ensure status is obtained during deploy
+		time.Sleep(time.Second * 10)
+		appliedManifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Get(context.TODO(), j.Resource.ManifestName, metav1.GetOptions{})
+		logs.Logger.Println(appliedManifestWork.Name)
+		// skip if errors and set to Degraded
+		if err != nil || appliedManifestWork == nil {
+			logs.Logger.Println("Error obtaining applied ManifestWork status")
+			j.State = Degraded
 		} else {
-			logs.Logger.Println("Manifest UID could not be retrieved")
+			logs.Logger.Println("manifestWork uid: ", resUUID)
+			// TODO improve validation mustParse panics!
+			j.UUID = uuid.MustParse(resUUID)
+			// if the job is a recovery action
+			if JobTypeIsRecoveryAction(int(j.Type)) { // TODO refactor
+				appliedManifestWork, err = PatchWork(j)
+			}
+			// if conditions empty skip state mapper,
+			if len(appliedManifestWork.Status.Conditions) != 0 {
+				j.StateMapper(appliedManifestWork.Status)
+			} else {
+				// assumption: manifestwork is in progress
+				j.State = Progressing
+			}
+			// lock the job so other instance won't take it -> TODO: race condition is still possible!
+			b := new(bool)
+			*b = true
+			j.Locker = b
+			j.Resource.ID = j.UUID
+			j.Resource.ManifestName = appliedManifestWork.Name
+			// populate conditions slice
+			for _, condition := range appliedManifestWork.Status.Conditions {
+				j.Resource.Status.Conditions = append(j.Resource.Status.Conditions, condition)
+			}
+			fmt.Printf("Job's Resource details: %#v", j)
 		}
 	} else {
-		err = errors.New("Target Cannot be empty")
+		logs.Logger.Println("Manifest UID could not be retrieved")
 	}
 	// return status, this should be a map[uid,state:target]
 	return j, err
@@ -230,4 +251,9 @@ func CreateWork(j *Job) *workv1.ManifestWork {
 	}
 
 	return &work
+}
+
+func PatchWork(j *Job) (*workv1.ManifestWork, error) {
+	appliedManifestWork, err := clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Patch(context.TODO(), j.Resource.ManifestName, types.StrategicMergePatchType, []byte(j.Manifest), metav1.PatchOptions{})
+	return appliedManifestWork, err
 }
