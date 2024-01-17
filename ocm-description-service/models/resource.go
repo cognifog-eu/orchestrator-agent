@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,13 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	workv1 "open-cluster-management.io/api/work/v1"
-)
-
-var (
-	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
-	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
-	apiV3              = "/api/v3"
-	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
 )
 
 type Resource struct {
