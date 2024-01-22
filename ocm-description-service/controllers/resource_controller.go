@@ -37,14 +37,13 @@ func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) 
 		responses.ERROR(w, http.StatusForbidden, err)
 	}
 	manifestWork, err = models.GetManifestWork(stringTarget, stringManifestName)
-	status := models.Status{
-		Conditions: manifestWork.Status.Conditions,
-	}
+	conditions := manifestWork.Status.Conditions
+
 	resource := models.Resource{
 		ID:           uid,
 		ManifestName: stringManifestName,
 		NodeTarget:   stringTarget,
-		Status:       status,
+		Conditions:   conditions,
 		UpdatedAt:    time.Now(),
 	}
 	if uid.String() != string(manifestWork.UID) {

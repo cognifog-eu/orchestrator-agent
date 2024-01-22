@@ -153,7 +153,7 @@ func Execute(j *Job) (*Job, error) {
 		if err != nil {
 			// if error, manifeswork not created!
 			// panic(err.Error())
-			j.Resource.Status.Conditions = append(j.Resource.Status.Conditions,
+			j.Resource.Conditions = append(j.Resource.Conditions,
 				metav1.Condition{
 					Type:    workv1.WorkDegraded,
 					Status:  metav1.StatusFailure,
@@ -196,7 +196,7 @@ func Execute(j *Job) (*Job, error) {
 			j.Resource.ManifestName = appliedManifestWork.Name
 			// populate conditions slice
 			for _, condition := range appliedManifestWork.Status.Conditions {
-				j.Resource.Status.Conditions = append(j.Resource.Status.Conditions, condition)
+				j.Resource.Conditions = append(j.Resource.Conditions, condition)
 			}
 			fmt.Printf("Job's Resource details: %#v", j)
 		}
