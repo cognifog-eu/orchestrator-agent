@@ -14,16 +14,16 @@ import (
 )
 
 type Resource struct {
-	ID           uuid.UUID `json:"id"`
-	ManifestName string    `json:"resource_name"`
-	NodeTarget   string    `json:"node_target"`
-	Status       Status    `json:"status"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID           uuid.UUID          `json:"id"`
+	ManifestName string             `json:"resource_name"`
+	NodeTarget   string             `json:"node_target"`
+	Conditions   []metav1.Condition `json:"conditions,omitempty"`
+	UpdatedAt    time.Time          `json:"updatedAt"`
 }
 
-type Status struct {
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
+// type Status struct {
+// 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+// }
 
 func CreateManifestWork(target Target, manifestWorkYaml string) (string, error) {
 	name := "deploy-test-"
@@ -140,9 +140,7 @@ func ResourceSync() ([]Resource, error) {
 				resource := Resource{
 					ID:           manifestUID,
 					ManifestName: manifestWork.Name,
-					Status: Status{
-						manifestStatus.Conditions,
-					},
+					Conditions:   manifestStatus.Conditions,
 				}
 				resources = append(resources, resource)
 			}
