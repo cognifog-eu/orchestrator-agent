@@ -62,7 +62,8 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 	}
 	resources, err = models.ResourceSync()
 	if err != nil {
-		responses.ERROR(w, http.StatusInternalServerError, err)
+		// responses.ERROR(w, http.StatusInternalServerError, err)
+		logs.Logger.Println("Error during resource sync...", err)
 	}
 	for _, resource := range resources {
 		// update its status into JM (PUT)
@@ -75,8 +76,9 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		}
 		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
 		if err != nil {
-			responses.ERROR(w, http.StatusUnprocessableEntity, err)
-			return
+			// responses.ERROR(w, http.StatusUnprocessableEntity, err)
+			// return
+			logs.Logger.Println("Error during resource update ...", err)
 		}
 		query := reqState.URL.Query()
 		query.Add("uuid", resource.ID.String())
