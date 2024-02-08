@@ -14,7 +14,7 @@ import (
 )
 
 type Resource struct {
-	ID           uuid.UUID          `json:"id"`
+	ID           uuid.UUID          `json:"resource_uuid"`
 	ManifestName string             `json:"resource_name"`
 	NodeTarget   string             `json:"node_target"`
 	Conditions   []metav1.Condition `json:"conditions,omitempty"`
