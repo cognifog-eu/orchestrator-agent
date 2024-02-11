@@ -106,14 +106,14 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 
 		// do request
 		client2 := &http.Client{}
-		_, err = client2.Do(reqState)
+		res, err := client2.Do(reqState)
 		if err != nil {
 			logs.Logger.Println("Error occurred during resource status update request, resource ID: " + resource.ID.String())
 			// keep executing
 		}
 		defer reqState.Body.Close()
 		logs.Logger.Println("Resource status update request sent, resource ID: " + resource.ID.String())
-		logs.Logger.Printf("Resource status update request sent, response status is: %#v", reqState.Response.StatusCode)
+		logs.Logger.Println("HTTP Response Status:", res.StatusCode, http.StatusText(res.StatusCode))
 	}
 	responses.JSON(w, http.StatusOK, nil)
 }
