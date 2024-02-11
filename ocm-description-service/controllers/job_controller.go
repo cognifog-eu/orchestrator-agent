@@ -19,6 +19,15 @@ var (
 	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
 )
 
+// PullJobs example
+//
+//	@Description	pull and execute jobs
+//	@ID				pull-and-execute-jobs
+//	@Accept			json
+//	@Produce		json
+//	@Param			Authorization	header		string	true	"Authentication header"
+//	@Success		200				{string}	string	"Ok"
+//	@Router			/deploy-manager/execute [get]
 func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 
 	jobs := []models.Job{}

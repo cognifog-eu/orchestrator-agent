@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 type Server struct {
@@ -19,6 +20,15 @@ type Server struct {
 
 func (server *Server) Init() {
 	server.Router = mux.NewRouter()
+
+	// swagger
+	server.Router.PathPrefix("/deploy-manager/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("doc.json"), //The url pointing to API definition
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	)).Methods(http.MethodGet)
+
 	server.initializeRoutes()
 }
 

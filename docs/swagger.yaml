@@ -1,0 +1,96 @@
+basePath: /
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8083
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: ICOS Deployment Manager Microservice.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Deployment Manager API
+  version: "1.0"
+paths:
+  /deploy-manager/execute:
+    get:
+      consumes:
+      - application/json
+      description: pull and execute jobs
+      operationId: pull-and-execute-jobs
+      parameters:
+      - description: Authentication header
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            type: string
+  /deploy-manager/resource:
+    get:
+      consumes:
+      - application/json
+      description: get resource status by id
+      operationId: get-resource-status-by-id
+      parameters:
+      - description: Authentication header
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Resource ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            type: string
+        "400":
+          description: provided UID is different from the retrieved manifest
+          schema:
+            type: string
+        "404":
+          description: Can not find Resource
+          schema:
+            type: string
+        "422":
+          description: Can not parse UID
+          schema:
+            type: string
+  /deploy-manager/resource/sync:
+    get:
+      consumes:
+      - application/json
+      description: start sync-up
+      operationId: start-sync-up
+      parameters:
+      - description: Authentication header
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            type: string
+securityDefinitions:
+  OAuth 2.0:
+    type: basic
+swagger: "2.0"

@@ -15,6 +15,20 @@ import (
 	workv1 "open-cluster-management.io/api/work/v1"
 )
 
+// GetResourceStatus example
+//
+//	@Description	get resource status by id
+//	@ID				get-resource-status-by-id
+//	@Accept			json
+//	@Produce		json
+//	@Param			Authorization	header		string	true	"Authentication header"
+//	@Param			uid				path		string	true	"Resource ID"
+//	@Success		200				{object}	string	"Ok"
+//	@Failure		400				{string}	string	"Resource UID is required"
+//	@Failure		400				{string}	string	"provided UID is different from the retrieved manifest"
+//	@Failure		422				{string}	string	"Can not parse UID"
+//	@Failure		404				{string}	string	"Can not find Resource"
+//	@Router			/deploy-manager/resource [get]
 func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	stringUID := query.Get("uid")
@@ -54,6 +68,15 @@ func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) 
 	responses.JSON(w, http.StatusOK, resource)
 }
 
+// StartSyncUp example
+//
+//	@Description	start sync-up
+//	@ID				start-sync-up
+//	@Accept			json
+//	@Produce		json
+//	@Param			Authorization	header		string	true	"Authentication header"
+//	@Success		200				{string}	string	"Ok"
+//	@Router			/deploy-manager/resource/sync [get]
 func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 	var resources []models.Resource
 	err := models.InClusterConfig()
@@ -62,23 +85,20 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 	}
 	resources, err = models.ResourceSync()
 	if err != nil {
-		// responses.ERROR(w, http.StatusInternalServerError, err)
 		logs.Logger.Println("Error during resource sync...", err)
 	}
 	for _, resource := range resources {
-		// update its status into JM (PUT)
 		// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
-		logs.Logger.Println("Sending status details to Job Manager...")
-		fmt.Printf("Status details: %#v", resource)
+		logs.Logger.Println("Creating Status Request for Job Manager...")
+		logs.Logger.Println("Resource Status: ")
+		fmt.Printf("%#v", resource)
 		resourceBody, err := json.Marshal(resource)
 		if err != nil {
 			logs.Logger.Println("Could not unmarshall resource...", err)
 		}
-		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
+		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
 		if err != nil {
-			// responses.ERROR(w, http.StatusUnprocessableEntity, err)
-			// return
-			logs.Logger.Println("Error during resource update ...", err)
+			logs.Logger.Println("Error creating resource status update request...", err)
 		}
 		query := reqState.URL.Query()
 		query.Add("uuid", resource.ID.String())
@@ -86,14 +106,11 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 
 		// do request
 		client2 := &http.Client{}
-		resp, err := client2.Do(reqState)
+		_, err = client2.Do(reqState)
 		if err != nil {
-			logs.Logger.Println("Error occurred during Job details notification...")
-			// responses.ERROR(w, resp.StatusCode, err)
+			logs.Logger.Println("Error occurred during resource status update request, resource ID: " + resource.ID.String())
 			// keep executing
 		}
-		logs.Logger.Println("Update Resource Status Request " + logs.FormatRequest(reqState))
-		logs.Logger.Println("Update Resource Status Response " + resp.Status)
 		defer reqState.Body.Close()
 	}
 	responses.JSON(w, http.StatusOK, nil)
