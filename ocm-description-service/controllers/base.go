@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"context"
+	"etsn/server/ocm-description-service/utils/logs"
 	"flag"
-	"icos/server/ocm-description-service/utils/logs"
 	"net/http"
 	"os"
 	"os/signal"

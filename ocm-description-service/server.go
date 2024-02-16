@@ -1,8 +1,8 @@
 package server
 
 import (
+	"etsn/server/ocm-description-service/controllers"
 	"fmt"
-	"icos/server/ocm-description-service/controllers"
 )
 
 var server = controllers.Server{}

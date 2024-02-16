@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"icos/server/ocm-description-service/responses"
+	"etsn/server/ocm-description-service/responses"
 	"net/http"
 )
 

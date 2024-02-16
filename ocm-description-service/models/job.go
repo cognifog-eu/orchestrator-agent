@@ -2,9 +2,9 @@ package models
 
 import (
 	"context"
+	"etsn/server/ocm-description-service/utils/logs"
 	"flag"
 	"fmt"
-	"icos/server/ocm-description-service/utils/logs"
 	"path/filepath"
 	"time"
 

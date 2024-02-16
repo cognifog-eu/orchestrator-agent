@@ -1,4 +1,4 @@
-module icos/server
+module etsn/server
 
 go 1.19
 
