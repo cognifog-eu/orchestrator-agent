@@ -21,7 +21,7 @@ spec:
       automountServiceAccountToken: true
       containers:
       - name: ocm-description-service
-        image: registry.atosresearch.eu:18484/icos-ocm-description-svc:develop
+        image: registry.atosresearch.eu:18509/orch-agent-ocm-description-svc:dev
         imagePullPolicy: Always 
         env:
           - name: SERVER_PORT
