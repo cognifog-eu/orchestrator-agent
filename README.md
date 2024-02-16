@@ -1,6 +1,6 @@
 # OCM Description Service
 
-OCM Description Service Service - Responsible for offloading Jobs to underlying OCM Orchestrator
+OCM Description Service - Responsible for offloading Jobs to underlying OCM Orchestrator
 
 # Getting Started
 

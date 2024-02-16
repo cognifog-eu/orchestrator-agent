@@ -7,7 +7,7 @@ import (
 
 //	@title			Swagger Deployment Manager API
 //	@version		1.0
-//	@description	ICOS Deployment Manager Microservice.
+//	@description	OCM Description Service
 //	@termsOfService	http://swagger.io/terms/
 
 //	@contact.name	API Support

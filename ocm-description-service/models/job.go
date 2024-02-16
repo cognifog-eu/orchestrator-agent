@@ -59,7 +59,7 @@ var JobTypeFromString = map[string]JobType{
 
 type Job struct {
 	ID        uuid.UUID `json:"id"`
-	UUID      uuid.UUID `json:"uuid"` // unique across all ICOS, represents resource UUID
+	UUID      uuid.UUID `json:"uuid"` // unique across all ecosystem, represents resource UUID
 	Type      JobType   `json:"type,omitempty"`
 	State     State     `json:"state"`
 	JobGroup  JobGroup  `json:"group,omitempty"`

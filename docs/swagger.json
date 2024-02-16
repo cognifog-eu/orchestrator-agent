@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "ICOS Deployment Manager Microservice.",
+        "description": "OCM Description ServiceOCM Description Service",
         "title": "Swagger Deployment Manager API",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
