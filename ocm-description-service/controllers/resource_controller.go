@@ -106,7 +106,7 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 
 		// do request
 		client2 := &http.Client{}
-		res, err := client2.Do(reqState)
+		_, err = client2.Do(reqState)
 		if err != nil {
 			logs.Logger.Println("Error occurred during resource status update request, resource ID: " + resource.ID.String())
 			// keep executing
