@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
-	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
-	apiV3              = "/api/v3"
-	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
+	jobmanagerBaseURL = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
+	// lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
+	// apiV3              = "/api/v3"
+	// matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
 )
 
 // PullJobs example

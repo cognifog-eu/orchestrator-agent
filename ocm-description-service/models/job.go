@@ -148,6 +148,7 @@ func Execute(j *Job) (*Job, error) {
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
 		// create valid ManifestWork object
 		manifestWork := CreateWork(j)
+		// ensure namespace exists TODO
 		// send ManifestWork to OCM API Server
 		manifestWork, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWork, metav1.CreateOptions{})
 		if err != nil {

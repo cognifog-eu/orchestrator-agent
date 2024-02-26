@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/rs/cors v1.10.1
+	github.com/swaggo/swag v1.16.3
 	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.2
 	open-cluster-management.io/api v0.12.0
@@ -16,7 +17,6 @@ require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/go-openapi/spec v0.20.14 // indirect
 	github.com/swaggo/files/v2 v2.0.0 // indirect
-	github.com/swaggo/swag v1.16.3 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 )
 

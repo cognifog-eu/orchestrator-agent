@@ -35,7 +35,7 @@ func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) 
 	stringTarget := query.Get("node_target")
 	stringManifestName := query.Get("manifest_name")
 	if stringTarget == "" || stringUID == "" || stringManifestName == "" {
-		err := errors.New("Job's uid, node_target or manifest name are empty")
+		err := errors.New("job's uid, node_target or manifest name are empty")
 		fmt.Println("JOB's uid: " + stringUID + " or node_target: " + stringTarget + " or manifest name: " + stringManifestName + " are empty")
 		responses.ERROR(w, http.StatusBadRequest, err)
 		return
@@ -96,7 +96,7 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logs.Logger.Println("Could not unmarshall resource...", err)
 		}
-		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
+		reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/resources/status/"+resource.ID.String(), bytes.NewReader(resourceBody))
 		if err != nil {
 			logs.Logger.Println("Error creating resource status update request...", err)
 		}
@@ -106,14 +106,14 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 
 		// do request
 		client2 := &http.Client{}
-		_, err = client2.Do(reqState)
+		res, err := client2.Do(reqState)
 		if err != nil {
 			logs.Logger.Println("Error occurred during resource status update request, resource ID: " + resource.ID.String())
 			// keep executing
 		}
 		defer reqState.Body.Close()
-		// logs.Logger.Println("Resource status update request sent, resource ID: " + resource.ID.String())
-		// logs.Logger.Println("HTTP Response Status:", res.StatusCode, http.StatusText(res.StatusCode))
+		logs.Logger.Println("Resource status update request sent, resource ID: " + resource.ID.String())
+		logs.Logger.Println("HTTP Response Status:", res.StatusCode, http.StatusText(res.StatusCode))
 	}
 	responses.JSON(w, http.StatusOK, nil)
 }
