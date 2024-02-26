@@ -112,8 +112,8 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 			// keep executing
 		}
 		defer reqState.Body.Close()
-		logs.Logger.Println("Resource status update request sent, resource ID: " + resource.ID.String())
-		logs.Logger.Println("HTTP Response Status:", res.StatusCode, http.StatusText(res.StatusCode))
+		// logs.Logger.Println("Resource status update request sent, resource ID: " + resource.ID.String())
+		// logs.Logger.Println("HTTP Response Status:", res.StatusCode, http.StatusText(res.StatusCode))
 	}
 	responses.JSON(w, http.StatusOK, nil)
 }
