@@ -88,7 +88,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 				logs.Logger.Println("Could not unmarshall job...", err)
 			}
 			fmt.Printf("Job details: %#v", job)
-			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
+			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			query := reqState.URL.Query()
 			query.Add("uuid", job.UUID.String())
 			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
