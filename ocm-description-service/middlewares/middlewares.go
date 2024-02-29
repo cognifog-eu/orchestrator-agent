@@ -35,6 +35,13 @@ func SetMiddlewareLog(next http.HandlerFunc) http.HandlerFunc {
 
 func JWTValidation(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		if base64EncodedPublicKey == "" {
+			fmt.Println("No Authentication required")
+			next(w, r)
+			return
+		}
+
 		tokenString := r.Header.Get("Authorization")
 		splitToken := strings.Split(tokenString, "Bearer")
 		if len(splitToken) < 2 {
