@@ -5,20 +5,20 @@
 replicaCount: 1
 
 image:
-  repository: registry.atosresearch.eu:18484/icos-ocm-description-svc
+  repository: registry.atosresearch.eu:18509/orch-agent-ocm-description-svc
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "develop"
 
 imagePullSecrets:
-  - name: nexusicossecret
+  - name: nexusetsnsecret
 nameOverride: ""
 fullnameOverride: ""
 
 configMap:
   serverPort: 8083 # not needed
-  lighthouseBaseUrl: http://lighthouse.icos-project.eu:8080
-  matchmakingUrl: http://147.83.159.195:24780/matchmake
+  lighthouseBaseUrl: http://lighthouse:8080
+  matchmakingUrl: http://matchmaking:8080
   keycloakPublicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgTGF4mKVEa+eWX0S/+EWIfkkqbLba5WuQ1KKGRQz+P56Y0WNRbgjNl0CObndffmixbpgp4kg5jKq78HoFFP7bj0jQSNC3P26K9xPolFXbAlNJe41VMdI7xOkOF0D9GCplEylGlUlCgpaBnbloI4WcbH+RQ6n6Qp6MmNE+/xC3OMMhgEBacbiGtIR71N/HcDYDUORE335sSRpkrHhMxk3eWgZdIyfX88n9UkI3CtgNGIGgF8/w7ZYF2XBmVuv5+QE9d5fM9pZKWQnzBnsMJy4Xc+qZrZMI45KCHIW/DSFVGSsGboiVHSNVOu3mNhPSjvJtIH/7lItCG6m5zvBAvNf8QIDAQAB
   jobManagerUrl: http://10.160.3.20/jobmanager # TODO change
 

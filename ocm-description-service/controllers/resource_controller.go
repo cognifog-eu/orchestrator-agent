@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"etsn/server/ocm-description-service/models"
+	"etsn/server/ocm-description-service/responses"
+	"etsn/server/ocm-description-service/utils/logs"
 	"fmt"
-	"icos/server/ocm-description-service/models"
-	"icos/server/ocm-description-service/responses"
-	"icos/server/ocm-description-service/utils/logs"
 	"net/http"
 	"time"
 

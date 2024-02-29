@@ -155,7 +155,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Swagger Deployment Manager API",
-	Description:      "ICOS Deployment Manager Microservice.",
+	Description:      "OCM Description Service",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

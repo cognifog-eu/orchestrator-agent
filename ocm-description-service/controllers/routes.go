@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	m "icos/server/ocm-description-service/middlewares"
+	m "etsn/server/ocm-description-service/middlewares"
 )
 
 func (s *Server) initializeRoutes() {

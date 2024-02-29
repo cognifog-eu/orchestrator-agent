@@ -1,13 +1,13 @@
 package main
 
 import (
-	_ "icos/server/docs"
-	ocm_description_service "icos/server/ocm-description-service"
+	_ "etsn/server/docs"
+	ocm_description_service "etsn/server/ocm-description-service"
 )
 
 //	@title			Swagger Deployment Manager API
 //	@version		1.0
-//	@description	ICOS Deployment Manager Microservice.
+//	@description	OCM Description Service
 //	@termsOfService	http://swagger.io/terms/
 
 //	@contact.name	API Support

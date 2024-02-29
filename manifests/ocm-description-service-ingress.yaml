@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   # annotations:
   #   nginx.ingress.kubernetes.io/rewrite-target: /
-  name: icos-ocm-description
+  name: etsn-ocm-description
   namespace: default
 spec:
   ingressClassName: traefik
