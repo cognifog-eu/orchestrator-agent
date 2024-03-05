@@ -20,7 +20,7 @@ configMap:
   lighthouseBaseUrl: http://lighthouse:8080
   matchmakingUrl: ""
   keycloakPublicKey: ""
-  jobManagerUrl: http://jobmanager:8081/jobmanager
+  jobManagerUrl: http://jobmanager.jobmanager.svc.cluster.local:8082 # same cluster jobmanager service
 
 
 serviceAccount:
