@@ -88,8 +88,9 @@ type Target struct {
 
 // hold information that N jobs share (N jobs needed to provide application x)
 type JobGroup struct {
-	AppName        string `json:"appName"`
-	AppDescription string `json:"appDescription"`
+	AppInstanceID  uuid.UUID `json:"app_instance_id"`
+	AppName        string    `json:"appName"`
+	AppDescription string    `json:"appDescription"`
 }
 
 type KubeConfig struct {
@@ -238,6 +239,11 @@ func CreateWork(j *Job) *workv1.ManifestWork {
 			APIVersion: "work.open-cluster-management.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"app.icos.eu/name":      j.JobGroup.AppName,
+				"app.icos.eu/component": j.Resource.ManifestName,
+				"app.icos.eu/instance":  j.JobGroup.AppInstanceID.String(),
+			},
 			Name: j.Resource.ManifestName,
 			// GenerateName: "deploy-app-", // TODO change
 			Namespace: j.Targets[0].ClusterName,
