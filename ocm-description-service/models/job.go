@@ -88,9 +88,9 @@ type Target struct {
 
 // hold information that N jobs share (N jobs needed to provide application x)
 type JobGroup struct {
-	AppInstanceID  uuid.UUID `json:"app_instance_id"`
-	AppName        string    `json:"appName"`
-	AppDescription string    `json:"appDescription"`
+	AppInstanceID  uuid.UUID `json:"job_group_id"`
+	AppName        string    `json:"job_group_name"`
+	AppDescription string    `json:"job_group_description"`
 }
 
 type KubeConfig struct {
