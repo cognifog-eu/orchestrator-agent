@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -100,20 +101,19 @@ func ExistsManifestWork(namespace string, manifestWorkName string) bool {
 
 func DeleteManifestWork(namespace string, manifestWorkName string) bool {
 	if !ExistsManifestWork(namespace, manifestWorkName) {
-		// log.Debug("ServiceMonitor " + manifestWorkName + " does not exist!")
+		fmt.Println("Manifest " + manifestWorkName + " does not exist!")
 		return false
 	}
 	//err := clientset.CoreV1().Services(namespace).Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 	err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).Delete(context.TODO(), manifestWorkName, metav1.DeleteOptions{})
-	// log.Debug("DeleteManifestWork: " + manifestWorkName + " " + strconv.FormatBool(err == nil))
+	fmt.Println("DeleteManifestWork: " + manifestWorkName + " " + strconv.FormatBool(err == nil))
 	return err == nil
 }
 
 func ListManifestWork(namespace string) *workv1.ManifestWorkList {
 	manifestlist, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).List(context.TODO(), metav1.ListOptions{})
-
 	if err != nil {
-		// log.Debug("Error obtaining ManifestWorkList")
+		fmt.Println("Error obtaining ManifestWorkList")
 	}
 	return manifestlist
 }
@@ -149,4 +149,18 @@ func ResourceSync() ([]Resource, error) {
 		}
 	}
 	return resources, err
+}
+
+func PatchManifestWork(namespace string, manifestWorkName string, manifestWork workv1.ManifestWork) bool {
+	//if getManifestWorkCache(namespace, manifestWorkName) {
+	//	return true
+	//}
+	//_, err := clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+
+	_, err := clientsetWorkOper.WorkV1().ManifestWorks(namespace).Update(context.TODO(), &manifestWork, metav1.UpdateOptions{})
+	// log.Debug("ExistsManifestWork: " + manifestWorkName + " " + strconv.FormatBool(err == nil)) //err.Error())
+	//if err == nil {
+	//	setManifestWorkCache(namespace, manifestWorkName)
+	//}
+	return err == nil
 }
