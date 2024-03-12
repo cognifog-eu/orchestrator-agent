@@ -29,6 +29,11 @@ var clientsetClusterOper clusterclient.Interface
 
 type State int
 type JobType int
+type OrchestratorType string
+
+const (
+	OCM OrchestratorType = "ocm"
+)
 
 const (
 	// Valid condition types are:
@@ -58,17 +63,18 @@ var JobTypeFromString = map[string]JobType{
 }
 
 type Job struct {
-	ID        uuid.UUID `json:"id"`
-	UUID      uuid.UUID `json:"uuid"` // unique across all ICOS, represents resource UUID
-	Type      JobType   `json:"type,omitempty"`
-	State     State     `json:"state"`
-	JobGroup  JobGroup  `json:"group,omitempty"`
-	Manifest  string    `json:"manifest"` // represents manifests to be applied, will be an array in the future
-	Manifests []string  `json:"manifests,omitempty"`
-	Targets   []Target  // array of targets where the manifest is applied
-	Locker    *bool     `json:"locker"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	Resource  Resource  `json:"resource"`
+	ID           uuid.UUID        `json:"id"`
+	UUID         uuid.UUID        `json:"uuid"` // unique across all ICOS, represents resource UUID
+	Type         JobType          `json:"type,omitempty"`
+	State        State            `json:"state"`
+	JobGroup     JobGroup         `json:"group,omitempty"`
+	Manifest     string           `json:"manifest"` // represents manifests to be applied, will be an array in the future
+	Manifests    []string         `json:"manifests,omitempty"`
+	Targets      []Target         // array of targets where the manifest is applied
+	Orchestrator OrchestratorType `gorm:"type:text" json:"orchestrator"` // identifies the orchestrator that can execute the job based on target provided by MM
+	Locker       *bool            `json:"locker"`
+	UpdatedAt    time.Time        `json:"updatedAt"`
+	Resource     Resource         `json:"resource"`
 	// Policies?
 	// Requirements?
 }
@@ -182,6 +188,10 @@ func Execute(j *Job) (*Job, error) {
 			// if the job is a recovery action
 			if JobTypeIsRecoveryAction(int(j.Type)) { // TODO refactor
 				appliedManifestWork, err = PatchWork(j)
+				if err != nil {
+					logs.Logger.Println("Error Patching ManifestWork")
+					j.State = Degraded
+				}
 			}
 			// if conditions empty skip state mapper,
 			if len(appliedManifestWork.Status.Conditions) != 0 {
@@ -197,9 +207,7 @@ func Execute(j *Job) (*Job, error) {
 			j.Resource.ID = j.UUID
 			j.Resource.ManifestName = appliedManifestWork.Name
 			// populate conditions slice
-			for _, condition := range appliedManifestWork.Status.Conditions {
-				j.Resource.Conditions = append(j.Resource.Conditions, condition)
-			}
+			j.Resource.Conditions = append(j.Resource.Conditions, appliedManifestWork.Status.Conditions...)
 			fmt.Printf("Job's Resource details: %#v", j)
 		}
 	} else {
