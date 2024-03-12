@@ -91,6 +91,9 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			query := reqState.URL.Query()
 			query.Add("uuid", job.UUID.String())
+			query.Add("orchestrator", "OCM")
+			query.Encode()
+
 			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
 			if err != nil {
 				responses.ERROR(w, http.StatusUnprocessableEntity, err)
