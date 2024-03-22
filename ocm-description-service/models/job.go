@@ -75,6 +75,7 @@ type Job struct {
 	Locker       *bool            `json:"locker"`
 	UpdatedAt    time.Time        `json:"updatedAt"`
 	Resource     Resource         `json:"resource"`
+	Namespace    string           `json:"namespace"`
 	// Policies?
 	// Requirements?
 }
@@ -156,6 +157,7 @@ func Execute(j *Job) (*Job, error) {
 		// create valid ManifestWork object
 		manifestWork := CreateWork(j)
 		// ensure namespace exists TODO
+
 		// send ManifestWork to OCM API Server
 		manifestWork, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWork, metav1.CreateOptions{})
 		if err != nil {
