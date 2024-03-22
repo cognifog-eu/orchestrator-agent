@@ -33,7 +33,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 	jobs := []models.Job{}
 	// get jobs with specific state; CREATED for now
 	logs.Logger.Println("Requesting Jobs...")
-	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"/jobmanager/jobs/executable/ochestrator/ocm", http.NoBody)
+	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"jobmanager/jobs/executable/ochestrator/ocm", http.NoBody)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
