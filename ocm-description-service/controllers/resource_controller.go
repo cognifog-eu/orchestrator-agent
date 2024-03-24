@@ -104,7 +104,8 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logs.Logger.Println("Error creating resource status update request...", err)
 		}
-		logs.Logger.Println("PUT Request to Job Manager being created: " + reqState.RequestURI)
+		logs.Logger.Println("PUT Request to Job Manager being created: ")
+		logs.Logger.Println(reqState.URL)
 		query := reqState.URL.Query()
 		query.Add("uuid", resource.ID.String())
 		reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
