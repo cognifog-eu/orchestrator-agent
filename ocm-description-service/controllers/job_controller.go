@@ -38,7 +38,8 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
 	}
-	logs.Logger.Println("GET Request to Job Manager being created: " + reqJobs.RequestURI)
+	logs.Logger.Println("GET Request to Job Manager being created: ")
+	logs.Logger.Println(reqJobs.URL)
 	// add bearer
 	reqJobs.Header.Add("Authorization", r.Header.Get("Authorization"))
 
@@ -94,7 +95,8 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 			query.Add("uuid", job.UUID.String())
 			query.Add("orchestrator", "ocm")
 			query.Encode()
-			logs.Logger.Println("PUT Request to Job Manager being created: " + reqState.RequestURI)
+			logs.Logger.Println("PUT Request to Job Manager being created: ")
+			logs.Logger.Println(reqState.URL)
 
 			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
 			if err != nil {
