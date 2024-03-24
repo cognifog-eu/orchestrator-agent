@@ -51,6 +51,10 @@ func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) 
 		responses.ERROR(w, http.StatusForbidden, err)
 	}
 	manifestWork, err = models.GetManifestWork(stringTarget, stringManifestName)
+	if err != nil {
+		logs.Logger.Println("Error during Manifest retrieval...", err)
+	}
+
 	conditions := manifestWork.Status.Conditions
 
 	resource := models.Resource{
@@ -100,6 +104,7 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logs.Logger.Println("Error creating resource status update request...", err)
 		}
+		logs.Logger.Println("PUT Request to Job Manager being created: " + reqState.RequestURI)
 		query := reqState.URL.Query()
 		query.Add("uuid", resource.ID.String())
 		reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
