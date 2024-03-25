@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"icos/server/ocm-description-service/utils/logs"
@@ -156,8 +157,6 @@ func Execute(j *Job) (*Job, error) {
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
 		// create valid ManifestWork object
 		manifestWork := CreateWork(j)
-		// ensure namespace exists TODO
-
 		// send ManifestWork to OCM API Server
 		manifestWork, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWork, metav1.CreateOptions{})
 		if err != nil {
@@ -243,6 +242,19 @@ func (j *Job) StateMapper(state workv1.ManifestWorkStatus) {
 func CreateWork(j *Job) *workv1.ManifestWork {
 	var manifest *workv1.Manifest
 	yaml.Unmarshal([]byte(j.Manifest), &manifest)
+
+	// ensure namespace exists TODO
+	var manifestMapper Manifest
+	json.Unmarshal(manifest.Raw, &manifestMapper)
+	fmt.Printf("Uncoded manifest: %#v", manifestMapper)
+	manifestMapper.Namespace = j.Namespace
+	manifestBodyBytes, err := json.Marshal(manifestMapper)
+	if err != nil {
+		logs.Logger.Println("Error adding Namespace to Manifest")
+		j.State = Degraded
+	}
+	manifest.Raw = manifestBodyBytes // TODO test
+
 	work := workv1.ManifestWork{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ManifestWork",
