@@ -3,12 +3,16 @@ package models
 type Manifests []Manifest
 
 type Manifest struct {
-	APIVersion string      `json:"apiVersion"`
-	Kind       string      `json:"kind"`
-	Metadata   interface{} `json:"metadata"`
-	Name       string      `json:"name"`
-	Namespace  string      `json:"namespace"`
+	APIVersion string   `json:"apiVersion"`
+	Kind       string   `json:"kind"`
+	Metadata   Metadata `json:"metadata"`
+	Name       string   `json:"name"`
+	Namespace  string   `json:"namespace"`
 	// Spec       Spec        `json:"spec"`
+}
+
+type Metadata struct {
+	Name string `json:"name"`
 }
 
 // type Spec struct {
