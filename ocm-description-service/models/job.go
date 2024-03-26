@@ -276,8 +276,8 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 			Name: j.Namespace,
 		},
 	}
-	logs.Logger.Printf("%v", nSManifest)
-	nSManifestBytes := []byte(fmt.Sprintf("%v", nSManifest))
+	logs.Logger.Printf("%#v", nSManifest)
+	nSManifestBytes := []byte(fmt.Sprintf("%#v", nSManifest))
 	// nSManifestBytes, err := y.Marshal(&nSManifest)
 	// if err != nil {
 	// 	logs.Logger.Println("Could not marshal namespace manifest" + err.Error())
