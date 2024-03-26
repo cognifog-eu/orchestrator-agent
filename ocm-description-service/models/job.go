@@ -292,7 +292,7 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 			APIVersion: "work.open-cluster-management.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: j.JobGroup.AppName + "- namespace",
+			Name: j.JobGroup.AppName + "-ns",
 			// GenerateName: "deploy-app-", // TODO change
 			Namespace: j.Targets[0].ClusterName,
 		},
