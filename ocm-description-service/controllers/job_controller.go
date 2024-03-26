@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	jobmanagerBaseURL  = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
-	lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
-	apiV3              = "/api/v3"
-	matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
+	jobmanagerBaseURL = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
+	// lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
+	// apiV3              = "/api/v3"
+	// matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
 )
 
 // PullJobs example
@@ -33,11 +33,13 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 	jobs := []models.Job{}
 	// get jobs with specific state; CREATED for now
 	logs.Logger.Println("Requesting Jobs...")
-	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"/jobmanager/jobs/executable", http.NoBody)
+	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"/jobmanager/jobs/executable/orchestrator/ocm", http.NoBody)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
 	}
+	logs.Logger.Println("GET Request to Job Manager being created: ")
+	logs.Logger.Println(reqJobs.URL)
 	// add bearer
 	reqJobs.Header.Add("Authorization", r.Header.Get("Authorization"))
 
@@ -88,9 +90,14 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 				logs.Logger.Println("Could not unmarshall job...", err)
 			}
 			fmt.Printf("Job details: %#v", job)
-			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
+			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			query := reqState.URL.Query()
 			query.Add("uuid", job.UUID.String())
+			query.Add("orchestrator", "ocm")
+			query.Encode()
+			logs.Logger.Println("PUT Request to Job Manager being created: ")
+			logs.Logger.Println(reqState.URL)
+
 			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
 			if err != nil {
 				responses.ERROR(w, http.StatusUnprocessableEntity, err)

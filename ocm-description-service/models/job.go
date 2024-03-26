@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"etsn/server/ocm-description-service/utils/logs"
 	"flag"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	y "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -29,6 +31,11 @@ var clientsetClusterOper clusterclient.Interface
 
 type State int
 type JobType int
+type OrchestratorType string
+
+const (
+	OCM OrchestratorType = "ocm"
+)
 
 const (
 	// Valid condition types are:
@@ -44,6 +51,8 @@ const (
 	CreateDeployment JobType = iota + 1
 	GetDeployment
 	DeleteDeployment
+	RecoveryJob
+	CreateNamespace
 
 	ScaleIn
 	ScaleOut
@@ -53,28 +62,36 @@ var JobTypeFromString = map[string]JobType{
 	"CreateDeployment": CreateDeployment,
 	"GetDeployment":    GetDeployment,
 	"DeleteDeployment": DeleteDeployment,
+	"RecoveryJob":      RecoveryJob,
+	"CreateNamespace":  CreateNamespace,
 	"ScaleIn":          ScaleIn,
 	"ScaleOut":         ScaleOut,
 }
 
 type Job struct {
-	ID        uuid.UUID `json:"id"`
-	UUID      uuid.UUID `json:"uuid"` // unique across all ecosystem, represents resource UUID
-	Type      JobType   `json:"type,omitempty"`
-	State     State     `json:"state"`
-	JobGroup  JobGroup  `json:"group,omitempty"`
-	Manifest  string    `json:"manifest"` // represents manifests to be applied, will be an array in the future
-	Manifests []string  `json:"manifests,omitempty"`
-	Targets   []Target  // array of targets where the manifest is applied
-	Locker    *bool     `json:"locker"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	Resource  Resource  `json:"resource"`
+	ID           uuid.UUID        `json:"id"`
+	UUID         uuid.UUID        `json:"uuid"` // unique across all ecosystem, represents resource UUID
+	Type         JobType          `json:"type,omitempty"`
+	State        State            `json:"state"`
+	JobGroup     JobGroup         `json:"group,omitempty"`
+	Manifest     string           `json:"manifest"` // represents manifests to be applied, will be an array in the future
+	Manifests    []string         `json:"manifests,omitempty"`
+	Targets      []Target         // array of targets where the manifest is applied
+	Orchestrator OrchestratorType `gorm:"type:text" json:"orchestrator"` // identifies the orchestrator that can execute the job based on target provided by MM
+	Locker       *bool            `json:"locker"`
+	UpdatedAt    time.Time        `json:"updatedAt"`
+	Resource     Resource         `json:"resource"`
+	Namespace    string           `json:"namespace"`
 	// Policies?
 	// Requirements?
 }
 
 func JobTypeIsRecoveryAction(value int) bool {
 	return int(ScaleIn) <= value && value >= int(ScaleOut)
+}
+
+func JobTypeIsCreateNamespace(value int) bool {
+	return int(CreateNamespace) == value
 }
 
 type Target struct {
@@ -88,8 +105,9 @@ type Target struct {
 
 // hold information that N jobs share (N jobs needed to provide application x)
 type JobGroup struct {
-	AppName        string `json:"appName"`
-	AppDescription string `json:"appDescription"`
+	AppInstanceID  uuid.UUID `json:"job_group_id"`
+	AppName        string    `json:"job_group_name"`
+	AppDescription string    `json:"job_group_description"`
 }
 
 type KubeConfig struct {
@@ -143,6 +161,24 @@ func InClusterConfig() error {
 func Execute(j *Job) (*Job, error) {
 	var err error
 	resUUID := j.UUID.String()
+	// namespace work creation
+	if JobTypeIsCreateNamespace(int(j.Type)) {
+		logs.Logger.Println("Creating Work for NS Job: " + j.ID.String())
+		manifestWorkNS := CreateNSWork(j)
+		// send ManifestWork to OCM API Server
+		_, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWorkNS, metav1.CreateOptions{})
+		if err != nil {
+			// if error, manifeswork not created!
+			// panic(err.Error())
+			j.Resource.Conditions = append(j.Resource.Conditions,
+				metav1.Condition{
+					Type:    workv1.WorkDegraded,
+					Status:  metav1.StatusFailure,
+					Message: "manifestworks.work.open-cluster-management.io" + j.Resource.ManifestName + "already exists",
+				})
+			logs.Logger.Println("error occured: ", err)
+		}
+	}
 	// if execution requires the creation of a new manifest work
 	if !JobTypeIsRecoveryAction(int(j.Type)) {
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
@@ -180,6 +216,10 @@ func Execute(j *Job) (*Job, error) {
 			// if the job is a recovery action
 			if JobTypeIsRecoveryAction(int(j.Type)) { // TODO refactor
 				appliedManifestWork, err = PatchWork(j)
+				if err != nil {
+					logs.Logger.Println("Error Patching ManifestWork")
+					j.State = Degraded
+				}
 			}
 			// if conditions empty skip state mapper,
 			if len(appliedManifestWork.Status.Conditions) != 0 {
@@ -195,9 +235,7 @@ func Execute(j *Job) (*Job, error) {
 			j.Resource.ID = j.UUID
 			j.Resource.ManifestName = appliedManifestWork.Name
 			// populate conditions slice
-			for _, condition := range appliedManifestWork.Status.Conditions {
-				j.Resource.Conditions = append(j.Resource.Conditions, condition)
-			}
+			j.Resource.Conditions = append(j.Resource.Conditions, appliedManifestWork.Status.Conditions...)
 			fmt.Printf("Job's Resource details: %#v", j)
 		}
 	} else {
@@ -228,15 +266,76 @@ func (j *Job) StateMapper(state workv1.ManifestWorkStatus) {
 	}
 }
 
+func CreateNSWork(j *Job) *workv1.ManifestWork {
+	var manifest *workv1.Manifest
+	var err error
+	// namespace creation work
+	// create manifest then marshal it
+	nSManifest := ManifestMapper{
+		APIVersion: "v1",
+		Kind:       "Namespace",
+		Metadata: Metadata{
+			Name: j.Namespace,
+		},
+	}
+	nSManifestBytes, err := y.Marshal(&nSManifest)
+	if err != nil {
+		logs.Logger.Println("Could not marshal namespace manifest" + err.Error())
+	}
+	yaml.Unmarshal(nSManifestBytes, &manifest)
+	if err != nil {
+		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
+	}
+	logs.Logger.Printf("Manifest details: %#v", manifest)
+	workNS := workv1.ManifestWork{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ManifestWork",
+			APIVersion: "work.open-cluster-management.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: j.JobGroup.AppName + "- namespace",
+			// GenerateName: "deploy-app-", // TODO change
+			Namespace: j.Targets[0].ClusterName,
+		},
+		Spec: workv1.ManifestWorkSpec{
+			Workload: workv1.ManifestsTemplate{
+				Manifests: []workv1.Manifest{
+					*manifest,
+				},
+			},
+		},
+	}
+	return &workNS
+}
+
 func CreateWork(j *Job) *workv1.ManifestWork {
 	var manifest *workv1.Manifest
+	var err error
+
 	yaml.Unmarshal([]byte(j.Manifest), &manifest)
+	// ensure namespace exists TODO
+	var manifestMapper Manifest
+	json.Unmarshal(manifest.Raw, &manifestMapper)
+	fmt.Printf("Uncoded manifest: %#v", manifestMapper)
+	manifestMapper.Namespace = j.Namespace
+	manifestBodyBytes, err := json.Marshal(manifestMapper)
+	if err != nil {
+		logs.Logger.Println("Error adding Namespace to Manifest")
+		j.State = Degraded
+	}
+	manifest.Raw = manifestBodyBytes // TODO test
+
 	work := workv1.ManifestWork{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ManifestWork",
 			APIVersion: "work.open-cluster-management.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"app.cognifog.eu/name":      j.JobGroup.AppName,
+				"app.cognifog.eu/component": j.Resource.ManifestName,
+				"app.cognifog.eu/instance":  j.JobGroup.AppInstanceID.String(),
+			},
 			Name: j.Resource.ManifestName,
 			// GenerateName: "deploy-app-", // TODO change
 			Namespace: j.Targets[0].ClusterName,
