@@ -70,7 +70,7 @@ var JobTypeFromString = map[string]JobType{
 
 type Job struct {
 	ID           uuid.UUID        `json:"id"`
-	UUID         uuid.UUID        `json:"uuid"` // unique across all ICOS, represents resource UUID
+	UUID         uuid.UUID        `json:"uuid"` // unique across all ecosystem, represents resource UUID
 	Type         JobType          `json:"type,omitempty"`
 	State        State            `json:"state"`
 	JobGroup     JobGroup         `json:"group,omitempty"`
@@ -332,9 +332,9 @@ func CreateWork(j *Job) *workv1.ManifestWork {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"app.icos.eu/name":      j.JobGroup.AppName,
-				"app.icos.eu/component": j.Resource.ManifestName,
-				"app.icos.eu/instance":  j.JobGroup.AppInstanceID.String(),
+				"app.cognifog.eu/name":      j.JobGroup.AppName,
+				"app.cognifog.eu/component": j.Resource.ManifestName,
+				"app.cognifog.eu/instance":  j.JobGroup.AppInstanceID.String(),
 			},
 			Name: j.Resource.ManifestName,
 			// GenerateName: "deploy-app-", // TODO change
