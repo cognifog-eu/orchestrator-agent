@@ -271,7 +271,7 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 	var err error
 	// namespace creation work
 	// create manifest then marshal it
-	nSManifest := Manifest{
+	nSManifest := ManifestMapper{
 		APIVersion: "v1",
 		Kind:       "Namespace",
 		Metadata: Metadata{
