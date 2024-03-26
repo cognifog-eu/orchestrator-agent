@@ -12,6 +12,8 @@ type Manifest struct {
 	Spec       Spec     `json:"spec"`
 }
 
+type ManifestMappers []ManifestMapper
+
 type ManifestMapper struct {
 	APIVersion string   `yaml:"apiVersion"`
 	Kind       string   `yaml:"kind"`

@@ -270,6 +270,7 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 	var err error
 	// namespace creation work
 	// create manifest then marshal it
+	nSManifests := ManifestMappers{}
 	nSManifest := ManifestMapper{
 		APIVersion: "v1",
 		Kind:       "Namespace",
@@ -277,13 +278,15 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 			Name: j.Namespace,
 		},
 	}
-	logs.Logger.Printf("%#v", nSManifest)
+	nSManifests = append(nSManifests, nSManifest)
+	logs.Logger.Printf("%#v", nSManifests)
 	// nSManifestBytes := []byte(fmt.Sprintf("%#v", nSManifest))
-	nSManifestBytes, err := y.Marshal(&nSManifest)
+	nSManifestBytes, err := y.Marshal(&nSManifests)
 	if err != nil {
 		logs.Logger.Println("Could not marshal namespace manifest" + err.Error())
 	}
 	err = y.Unmarshal(nSManifestBytes, &manifest)
+	logs.Logger.Printf("%#v", manifest)
 	if err != nil {
 		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
 	}
