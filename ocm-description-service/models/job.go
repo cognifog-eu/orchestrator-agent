@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"icos/server/ocm-description-service/utils/logs"
@@ -310,20 +309,21 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 
 func CreateWork(j *Job) *workv1.ManifestWork {
 	var manifest *workv1.Manifest
-	var err error
-
 	yaml.Unmarshal([]byte(j.Manifest), &manifest)
-	// ensure namespace exists TODO
-	var manifestMapper Manifest
-	json.Unmarshal(manifest.Raw, &manifestMapper)
-	fmt.Printf("Uncoded manifest: %#v", manifestMapper)
-	manifestMapper.Namespace = j.Namespace
-	manifestBodyBytes, err := json.Marshal(manifestMapper)
-	if err != nil {
-		logs.Logger.Println("Error adding Namespace to Manifest")
-		j.State = Degraded
-	}
-	manifest.Raw = manifestBodyBytes // TODO test
+	// var err error
+
+	// yaml.Unmarshal([]byte(j.Manifest), &manifest)
+	// // ensure namespace exists TODO
+	// var manifestMapper Manifest
+	// json.Unmarshal(manifest.Raw, &manifestMapper)
+	// fmt.Printf("Uncoded manifest: %#v", manifestMapper)
+	// manifestMapper.Namespace = j.Namespace
+	// manifestBodyBytes, err := json.Marshal(manifestMapper)
+	// if err != nil {
+	// 	logs.Logger.Println("Error adding Namespace to Manifest")
+	// 	j.State = Degraded
+	// }
+	// manifest.Raw = manifestBodyBytes // TODO test
 
 	work := workv1.ManifestWork{
 		TypeMeta: metav1.TypeMeta{
@@ -337,7 +337,7 @@ func CreateWork(j *Job) *workv1.ManifestWork {
 				"app.icos.eu/instance":  j.JobGroup.AppInstanceID.String(),
 			},
 			Name: j.Resource.ManifestName,
-			// GenerateName: "deploy-app-", // TODO change
+			// GenerateName: "deploy-app-", // TODO test
 			Namespace: j.Targets[0].ClusterName,
 		},
 		Spec: workv1.ManifestWorkSpec{
