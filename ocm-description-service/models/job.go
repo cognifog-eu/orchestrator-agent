@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	y "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -277,16 +278,16 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 		},
 	}
 	logs.Logger.Printf("%#v", nSManifest)
-	nSManifestBytes := []byte(fmt.Sprintf("%#v", nSManifest))
-	// nSManifestBytes, err := y.Marshal(&nSManifest)
-	// if err != nil {
-	// 	logs.Logger.Println("Could not marshal namespace manifest" + err.Error())
-	// }
-	err = yaml.Unmarshal(nSManifestBytes, &manifest)
+	// nSManifestBytes := []byte(fmt.Sprintf("%#v", nSManifest))
+	nSManifestBytes, err := y.Marshal(&nSManifest)
+	if err != nil {
+		logs.Logger.Println("Could not marshal namespace manifest" + err.Error())
+	}
+	err = y.Unmarshal(nSManifestBytes, &manifest)
 	if err != nil {
 		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
 	}
-	logs.Logger.Printf("Manifest details: %#v", nSManifestBytes)
+	fmt.Printf("Manifest details: %#v", nSManifestBytes)
 	workNS := workv1.ManifestWork{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ManifestWork",
