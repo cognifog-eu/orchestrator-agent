@@ -11,8 +11,15 @@ type Manifest struct {
 	// Spec       Spec        `json:"spec"`
 }
 
+type ManifestMapper struct {
+	APIVersion string   `json:"apiVersion"`
+	Kind       string   `json:"kind"`
+	Metadata   Metadata `json:"metadata"`
+}
+
 type Metadata struct {
-	Name string `json:"name"`
+	Name      string `json:"name"`
+	Namespace string `json:"-"` // TODO some manifest are not namespaced
 }
 
 // type Spec struct {
