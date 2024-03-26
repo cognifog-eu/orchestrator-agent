@@ -13,14 +13,14 @@ type Manifest struct {
 }
 
 type ManifestMapper struct {
-	APIVersion string   `json:"apiVersion"`
-	Kind       string   `json:"kind"`
-	Metadata   Metadata `json:"metadata"`
+	APIVersion string   `yaml:"apiVersion"`
+	Kind       string   `yaml:"kind"`
+	Metadata   Metadata `yaml:"metadata"`
 }
 
 type Metadata struct {
-	Name      string `json:"name"`
-	Namespace string `json:"-"` // TODO some manifest are not namespaced
+	Name      string `yaml:"name"`
+	Namespace string `yaml:"-"` // TODO some manifest are not namespaced
 }
 
 type Spec struct {
