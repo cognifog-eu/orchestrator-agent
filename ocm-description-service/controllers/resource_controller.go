@@ -35,7 +35,7 @@ func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) 
 	stringTarget := query.Get("node_target")
 	stringManifestName := query.Get("manifest_name")
 	if stringTarget == "" || stringUID == "" || stringManifestName == "" {
-		err := errors.New("Job's uid, node_target or manifest name are empty")
+		err := errors.New("job's uid, node_target or manifest name are empty")
 		fmt.Println("JOB's uid: " + stringUID + " or node_target: " + stringTarget + " or manifest name: " + stringManifestName + " are empty")
 		responses.ERROR(w, http.StatusBadRequest, err)
 		return
@@ -51,6 +51,10 @@ func (server *Server) GetResourceStatus(w http.ResponseWriter, r *http.Request) 
 		responses.ERROR(w, http.StatusForbidden, err)
 	}
 	manifestWork, err = models.GetManifestWork(stringTarget, stringManifestName)
+	if err != nil {
+		logs.Logger.Println("Error during Manifest retrieval...", err)
+	}
+
 	conditions := manifestWork.Status.Conditions
 
 	resource := models.Resource{
@@ -100,6 +104,8 @@ func (server *Server) StartSyncUp(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logs.Logger.Println("Error creating resource status update request...", err)
 		}
+		logs.Logger.Println("PUT Request to Job Manager being created: ")
+		logs.Logger.Println(reqState.URL)
 		query := reqState.URL.Query()
 		query.Add("uuid", resource.ID.String())
 		reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
