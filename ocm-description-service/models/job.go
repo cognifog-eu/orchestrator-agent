@@ -276,6 +276,7 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 			Name: j.Namespace,
 		},
 	}
+	logs.Logger.Printf("%v", nSManifest)
 	nSManifestBytes := []byte(fmt.Sprintf("%v", nSManifest))
 	// nSManifestBytes, err := y.Marshal(&nSManifest)
 	// if err != nil {
