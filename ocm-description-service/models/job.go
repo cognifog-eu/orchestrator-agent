@@ -7,7 +7,7 @@ import (
 	"icos/server/ocm-description-service/utils/logs"
 	"path/filepath"
 	"time"
-
+    yaml "gopkg.in/yaml.v2"
 	"github.com/google/uuid"
 	y "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
