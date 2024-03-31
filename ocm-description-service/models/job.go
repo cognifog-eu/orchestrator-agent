@@ -7,12 +7,12 @@ import (
 	"icos/server/ocm-description-service/utils/logs"
 	"path/filepath"
 	"time"
-
+    yaml "gopkg.in/yaml.v2"
 	"github.com/google/uuid"
-	y "gopkg.in/yaml.v3"
+	//y "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/yaml"
+	//"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -270,7 +270,6 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 	var err error
 	// namespace creation work
 	// create manifest then marshal it
-	nSManifests := ManifestMappers{}
 	nSManifest := ManifestMapper{
 		APIVersion: "v1",
 		Kind:       "Namespace",
@@ -278,19 +277,17 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 			Name: j.Namespace,
 		},
 	}
-	nSManifests = append(nSManifests, nSManifest)
-	logs.Logger.Printf("%#v", nSManifests)
-	// nSManifestBytes := []byte(fmt.Sprintf("%#v", nSManifest))
-	nSManifestBytes, err := y.Marshal(&nSManifests)
+	//logs.Logger.Println(string(nSManifest))
+	manif, err := yaml.Marshal(nSManifest)
 	if err != nil {
-		logs.Logger.Println("Could not marshal namespace manifest" + err.Error())
+		logs.Logger.Printf("Could not marshal namespace manifest, %v", err.Error())
 	}
-	err = y.Unmarshal(nSManifestBytes, &manifest)
+	yaml.Unmarshal([]byte(string(manif)), &manifest)
 	logs.Logger.Printf("%#v", manifest)
 	if err != nil {
 		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
 	}
-	fmt.Printf("Manifest details: %#v", nSManifestBytes)
+	fmt.Printf("Manifest details: %#v", nSManifest)
 	workNS := workv1.ManifestWork{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ManifestWork",
