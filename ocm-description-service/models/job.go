@@ -282,12 +282,12 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 	if err != nil {
 		logs.Logger.Printf("Could not marshal namespace manifest, %v", err.Error())
 	}
+	logs.Logger.Printf(string(manif))
 	yaml.Unmarshal([]byte(string(manif)), &manifest)
 	logs.Logger.Printf("%#v", manifest)
 	if err != nil {
 		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
 	}
-	fmt.Printf("Manifest details: %#v", nSManifest)
 	workNS := workv1.ManifestWork{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ManifestWork",
