@@ -179,7 +179,7 @@ func Execute(j *Job) (*Job, error) {
 		}
 	}
 	// if execution requires the creation of a new manifest work
-	if !JobTypeIsRecoveryAction(int(j.Type)) {
+	if !JobTypeIsRecoveryAction(int(j.Type)) && !JobTypeIsCreateNamespace(int(j.Type)) {
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
 		// create valid ManifestWork object
 		manifestWork := CreateWork(j)

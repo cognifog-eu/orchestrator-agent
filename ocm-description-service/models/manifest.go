@@ -22,7 +22,7 @@ type ManifestMapper struct {
 
 type Metadata struct {
 	Name      string `yaml:"name"`
-	Namespace string `yaml:"-"` // TODO some manifest are not namespaced
+	// Namespace string `yaml:"-"` // TODO some manifest are not namespaced
 }
 
 type Spec struct {
