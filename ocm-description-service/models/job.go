@@ -286,7 +286,7 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 	}
 	logs.Logger.Printf(string(manifBytes))
 	// use this manifest as job.Manifest
-	j.ManifestMapper(string(manifBytes))
+	j.Manifest = string(manifBytes)
 	yaml.Unmarshal([]byte(j.Manifest), &manifest)
 	logs.Logger.Printf("%#v", manifest)
 	if err != nil {
