@@ -287,7 +287,12 @@ func CreateNSWork(j *Job) *workv1.ManifestWork {
 	logs.Logger.Printf(string(manifBytes))
 	// use this manifest as job.Manifest
 	j.Manifest = string(manifBytes)
-	yaml.Unmarshal([]byte(j.Manifest), &manifest)
+	logs.Logger.Printf("manifest string: " + j.Manifest)
+	logs.Logger.Printf("manifest bytes: " + []byte(j.Manifest))
+	err = yaml.Unmarshal([]byte(j.Manifest), &manifest)
+	if err != nil {
+		logs.Logger.Printf("Could not unmarshal namespace manifest, %v", err.Error())
+	}
 	logs.Logger.Printf("%#v", manifest)
 	if err != nil {
 		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
