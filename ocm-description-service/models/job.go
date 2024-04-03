@@ -7,12 +7,12 @@ import (
 	"icos/server/ocm-description-service/utils/logs"
 	"path/filepath"
 	"time"
-    yaml "gopkg.in/yaml.v2"
+    //yaml "gopkg.in/yaml.v2"
 	"github.com/google/uuid"
 	//y "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	//"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -161,23 +161,23 @@ func Execute(j *Job) (*Job, error) {
 	var err error
 	resUUID := j.UUID.String()
 	// namespace work creation
-	if JobTypeIsCreateNamespace(int(j.Type)) {
-		logs.Logger.Println("Creating Work for NS Job: " + j.ID.String())
-		manifestWorkNS := CreateNSWork(j)
-		// send ManifestWork to OCM API Server
-		_, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWorkNS, metav1.CreateOptions{})
-		if err != nil {
-			// if error, manifeswork not created!
-			// panic(err.Error())
-			j.Resource.Conditions = append(j.Resource.Conditions,
-				metav1.Condition{
-					Type:    workv1.WorkDegraded,
-					Status:  metav1.StatusFailure,
-					Message: "manifestworks.work.open-cluster-management.io" + j.Resource.ManifestName + "already exists",
-				})
-			logs.Logger.Println("error occured: ", err)
-		}
-	}
+	// if JobTypeIsCreateNamespace(int(j.Type)) {
+	// 	logs.Logger.Println("Creating Work for NS Job: " + j.ID.String())
+	// 	manifestWorkNS := CreateNSWork(j)
+	// 	// send ManifestWork to OCM API Server
+	// 	_, err = clientsetWorkOper.WorkV1().ManifestWorks(j.Targets[0].ClusterName).Create(context.TODO(), manifestWorkNS, metav1.CreateOptions{})
+	// 	if err != nil {
+	// 		// if error, manifeswork not created!
+	// 		// panic(err.Error())
+	// 		j.Resource.Conditions = append(j.Resource.Conditions,
+	// 			metav1.Condition{
+	// 				Type:    workv1.WorkDegraded,
+	// 				Status:  metav1.StatusFailure,
+	// 				Message: "manifestworks.work.open-cluster-management.io" + j.Resource.ManifestName + "already exists",
+	// 			})
+	// 		logs.Logger.Println("error occured: ", err)
+	// 	}
+	// }
 	// if execution requires the creation of a new manifest work
 	if !JobTypeIsRecoveryAction(int(j.Type)) && !JobTypeIsCreateNamespace(int(j.Type)) {
 		logs.Logger.Println("Creating Work for Job: " + j.ID.String())
@@ -265,58 +265,58 @@ func (j *Job) StateMapper(state workv1.ManifestWorkStatus) {
 	}
 }
 
-func CreateNSWork(j *Job) *workv1.ManifestWork {
-	var manifest *workv1.Manifest
-	var err error
-	// namespace creation work
-	// create manifest then marshal it
-	nSManifest := ManifestMapper{
-		APIVersion: "v1",
-		Kind:       "Namespace",
-		Metadata: Metadata{
-			Name: j.Namespace,
-		},
-	}
-	var nSManifests ManifestMappers
-	nSManifests = append(nSManifests, nSManifest)
-	//logs.Logger.Println(string(nSManifest))
-	manifBytes, err := yaml.Marshal(nSManifests)
-	if err != nil {
-		logs.Logger.Printf("Could not marshal namespace manifest, %v", err.Error())
-	}
-	logs.Logger.Printf(string(manifBytes))
-	// use this manifest as job.Manifest
-	j.Manifest = string(manifBytes)
-	logs.Logger.Printf("manifest string: " + j.Manifest)
-	logs.Logger.Printf([]byte(j.Manifest))
-	err = yaml.Unmarshal([]byte(j.Manifest), &manifest)
-	if err != nil {
-		logs.Logger.Printf("Could not unmarshal namespace manifest, %v", err.Error())
-	}
-	logs.Logger.Printf("%#v", manifest)
-	if err != nil {
-		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
-	}
-	workNS := workv1.ManifestWork{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ManifestWork",
-			APIVersion: "work.open-cluster-management.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: j.JobGroup.AppName,
-			// GenerateName: "deploy-app-", // TODO change
-			Namespace: j.Targets[0].ClusterName,
-		},
-		Spec: workv1.ManifestWorkSpec{
-			Workload: workv1.ManifestsTemplate{
-				Manifests: []workv1.Manifest{
-					*manifest,
-				},
-			},
-		},
-	}
-	return &workNS
-}
+// func CreateNSWork(j *Job) *workv1.ManifestWork {
+// 	var manifest *workv1.Manifest
+// 	var err error
+// 	// namespace creation work
+// 	// create manifest then marshal it
+// 	nSManifest := ManifestMapper{
+// 		APIVersion: "v1",
+// 		Kind:       "Namespace",
+// 		Metadata: Metadata{
+// 			Name: j.Namespace,
+// 		},
+// 	}
+// 	var nSManifests ManifestMappers
+// 	nSManifests = append(nSManifests, nSManifest)
+// 	//logs.Logger.Println(string(nSManifest))
+// 	manifBytes, err := yaml.Marshal(nSManifests)
+// 	if err != nil {
+// 		logs.Logger.Printf("Could not marshal namespace manifest, %v", err.Error())
+// 	}
+// 	logs.Logger.Printf(string(manifBytes))
+// 	// use this manifest as job.Manifest
+// 	j.Manifest = string(manifBytes)
+// 	logs.Logger.Printf("manifest string: " + j.Manifest)
+// 	logs.Logger.Printf([]byte(j.Manifest))
+// 	err = yaml.Unmarshal([]byte(j.Manifest), &manifest)
+// 	if err != nil {
+// 		logs.Logger.Printf("Could not unmarshal namespace manifest, %v", err.Error())
+// 	}
+// 	logs.Logger.Printf("%#v", manifest)
+// 	if err != nil {
+// 		logs.Logger.Println("Could not unmarshal namespace manifest" + err.Error())
+// 	}
+// 	workNS := workv1.ManifestWork{
+// 		TypeMeta: metav1.TypeMeta{
+// 			Kind:       "ManifestWork",
+// 			APIVersion: "work.open-cluster-management.io/v1",
+// 		},
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name: j.JobGroup.AppName,
+// 			// GenerateName: "deploy-app-", // TODO change
+// 			Namespace: j.Targets[0].ClusterName,
+// 		},
+// 		Spec: workv1.ManifestWorkSpec{
+// 			Workload: workv1.ManifestsTemplate{
+// 				Manifests: []workv1.Manifest{
+// 					*manifest,
+// 				},
+// 			},
+// 		},
+// 	}
+// 	return &workNS
+// }
 
 func CreateWork(j *Job) *workv1.ManifestWork {
 	var manifest *workv1.Manifest
