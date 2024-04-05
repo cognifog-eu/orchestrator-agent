@@ -197,6 +197,8 @@ func Execute(j *Job) (*Job, error) {
 			logs.Logger.Println("error occured: ", err)
 		} // retrieve the UID created by OCM
 		resUUID = string(manifestWork.GetUID())
+		// since we use GenerateName during manifestWork creation it should be updated accordingly
+		j.Resource.ManifestName = manifestWork.Name
 	}
 	// retrieve the uuid and status of the applied manifest from OCM
 	if resUUID != "" {
