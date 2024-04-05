@@ -347,7 +347,7 @@ func CreateWork(j *Job) *workv1.ManifestWork {
 				"app.icos.eu/component": j.Resource.ManifestName,
 				"app.icos.eu/instance":  j.JobGroup.AppInstanceID.String(),
 			},
-			Name: j.Resource.ManifestName,
+			GenerateName: j.Resource.ManifestName + "-"
 			// GenerateName: "deploy-app-", // TODO test
 			Namespace: j.Targets[0].ClusterName,
 		},
