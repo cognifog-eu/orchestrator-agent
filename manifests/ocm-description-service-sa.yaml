@@ -1,5 +1,0 @@
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: manifestwork-editor-service-account
-  namespace: default # TODO change
