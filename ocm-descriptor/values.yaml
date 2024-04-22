@@ -5,13 +5,13 @@
 replicaCount: 1
 
 image:
-  repository: registry.atosresearch.eu:18509/orch-agent-ocm-description-svc
+  repository: harbor.cognifog.rid-intrasoft.eu/orchestrator-agent/orch-agent-ocm-description-svc 
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "main"
+  tag: "dev"
 
 imagePullSecrets:
-  - name: nexusetsnsecret
+  - name: cognifog-harbor-secret 
 nameOverride: ""
 fullnameOverride: ""
 

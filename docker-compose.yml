@@ -3,7 +3,7 @@ services:
   ocm-description-service:
     container_name: ocm-description
     # build: .
-    image: registry.atosresearch.eu:18509/orch-agent-ocm-description-svc:dev
+    image: harbor.cognifog.rid-intrasoft.eu/orchestrator-agent/orch-agent-ocm-description-svc:dev 
     ports: 
       - 8083:8083 # Forward the exposed port 8081 on the container to port 8081 on the host machine
     restart: on-failure
