@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -105,7 +105,7 @@ func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
 				logs.Logger.Println("Could not unmarshall job...", err)
 			}
 			fmt.Printf("Job details: %#v", job)
-			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
+			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
 			query := reqState.URL.Query()
 			query.Add("uuid", job.UUID.String())
 			query.Add("orchestrator", "ocm")
