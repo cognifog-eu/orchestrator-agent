@@ -1,11 +1,11 @@
 /*
-Copyright 2023 Bull SAS
+Copyright 2023-2024 Bull SAS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -44,31 +45,51 @@ func (server *Server) Init() {
 		httpSwagger.DomID("swagger-ui"),
 	)).Methods(http.MethodGet)
 
-	server.initializeRoutes()
+	// enable JWT middleware
+	enableJWT := os.Getenv("ENVIRONMENT") != "development"
+
+	server.initializeRoutes(enableJWT)
 }
 
 func (server *Server) Run(addr string) {
-	logs.Logger.Println("Listening to port " + addr + " ...")
+	logs.Logger.Println("Listening on port " + addr + " ...")
 	handler := cors.AllowAll().Handler(server.Router)
 
-	stop := make(chan os.Signal)
-	signal.Notify(stop, os.Interrupt)
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	stop := make(chan os.Signal, 1)
+
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		// init server
-		if err := http.ListenAndServe(addr, handler); err != nil {
-			if err != http.ErrServerClosed {
-				logs.Logger.Fatal(err)
-			}
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logs.Logger.Fatalf("Could not listen on %s: %v\n", addr, err)
 		}
 	}()
 
+	logs.Logger.Println("Server is ready to handle requests")
+
 	<-stop
 
-	// after stopping server
-	logs.Logger.Println("Closing connections ...")
+	logs.Logger.Println("Shutdown signal received")
 
-	var shutdownTimeout = flag.Duration("shutdown-timeout", 10*time.Second, "shutdown timeout (5s,5m,5h) before connections are cancelled")
-	_, cancel := context.WithTimeout(context.Background(), *shutdownTimeout)
+	shutdownTimeout := flag.Duration("shutdown-timeout", 10*time.Second, "shutdown timeout (5s,5m,5h) before connections are cancelled")
+	flag.Parse() // Ensure flags are parsed
+
+	ctx, cancel := context.WithTimeout(context.Background(), *shutdownTimeout)
 	defer cancel()
+
+	logs.Logger.Println("Shutting down server gracefully...")
+	if err := httpServer.Shutdown(ctx); err != nil {
+		logs.Logger.Fatalf("Server Shutdown Failed:%+v", err)
+	}
+
+	logs.Logger.Println("Server gracefully stopped")
 }

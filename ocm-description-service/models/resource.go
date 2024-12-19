@@ -1,11 +1,11 @@
 /*
-Copyright 2023 Bull SAS
+Copyright 2023-2024 Bull SAS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,22 +20,21 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
-	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	workv1 "open-cluster-management.io/api/work/v1"
 )
 
-type Resource struct {
-	ID           uuid.UUID          `json:"resource_uuid"`
-	ManifestName string             `json:"resource_name"`
-	NodeTarget   string             `json:"node_target"`
-	Conditions   []metav1.Condition `json:"conditions,omitempty"`
-	UpdatedAt    time.Time          `json:"updatedAt"`
-}
+// type Resource struct {
+// 	ID           string             `json:"resource_uuid"`
+// 	JobID        string             `json:"job_id" validate:"omitempty,uuid4"`
+// 	ManifestName string             `json:"resource_name"`
+// 	NodeTarget   string             `json:"node_target"`
+// 	Conditions   []metav1.Condition `json:"conditions,omitempty"`
+// 	UpdatedAt    time.Time          `json:"updatedAt"`
+// }
 
 // type Status struct {
 // 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -151,10 +150,10 @@ func ResourceSync() ([]Resource, error) {
 				// get status
 				manifestStatus = &manifestWork.Status
 				// find job with the corresponding UID, should I assume it exists?
-				manifestUID := uuid.MustParse(string(string(manifestWork.UID)))
+				// manifestUID := uuid.MustParse(string(string(manifestWork.UID)))
 				resource := Resource{
-					ID:           manifestUID,
-					ManifestName: manifestWork.Name,
+					ResourceUID:  string(manifestWork.UID),
+					ResourceName: manifestWork.Name,
 					Conditions:   manifestStatus.Conditions,
 				}
 				resources = append(resources, resource)

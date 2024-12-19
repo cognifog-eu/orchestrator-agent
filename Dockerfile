@@ -11,7 +11,6 @@ LABEL maintainer="Alex Volkov"
 RUN apk update && apk add --no-cache git \
 && rm -rf /var/lib/apt/lists/*
 
-
 # Set the current working directory inside the container 
 WORKDIR /ocm-description-svc
 

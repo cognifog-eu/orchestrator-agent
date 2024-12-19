@@ -1,4 +1,205 @@
 basePath: /
+definitions:
+  k8s_io_apimachinery_pkg_apis_meta_v1.ConditionStatus:
+    enum:
+    - "True"
+    - "False"
+    - Unknown
+    type: string
+    x-enum-varnames:
+    - ConditionTrue
+    - ConditionFalse
+    - ConditionUnknown
+  models.Job:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      job_group_description:
+        type: string
+      job_group_id:
+        type: string
+      job_group_name:
+        type: string
+      manifests:
+        items:
+          $ref: '#/definitions/models.PlainManifest'
+        type: array
+      namespace:
+        type: string
+      orchestrator:
+        allOf:
+        - $ref: '#/definitions/models.OrchestratorType'
+        description: Locker              *bool            `json:"locker,omitempty"`
+      owner_id:
+        description: ResourceUID         string           `json:"uuid,omitempty"`
+        type: string
+      resource:
+        $ref: '#/definitions/models.Resource'
+      state:
+        $ref: '#/definitions/models.JobState'
+      sub_type:
+        $ref: '#/definitions/models.RemediationType'
+      targets:
+        $ref: '#/definitions/models.Target'
+      type:
+        $ref: '#/definitions/models.JobType'
+      updated_at:
+        type: string
+    type: object
+  models.JobState:
+    enum:
+    - 1
+    - 2
+    - 3
+    - 4
+    type: integer
+    x-enum-varnames:
+    - Applied
+    - Progressing
+    - Available
+    - Degraded
+  models.JobType:
+    enum:
+    - 5
+    - 6
+    - 7
+    - 8
+    type: integer
+    x-enum-varnames:
+    - CreateDeployment
+    - DeleteDeployment
+    - UpdateDeployment
+    - ReplaceDeployment
+  models.OrchestratorType:
+    enum:
+    - ocm
+    - nuvla
+    type: string
+    x-enum-varnames:
+    - OCM
+    - NUVLA
+  models.PlainManifest:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      updated_at:
+        type: string
+      yamlString:
+        type: string
+    type: object
+  models.RemediationType:
+    enum:
+    - scale-up
+    - scale-down
+    - scale-out
+    - scale-in
+    - reallocation
+    type: string
+    x-enum-varnames:
+    - ScaleUp
+    - ScaleDown
+    - ScaleOut
+    - ScaleIn
+    - Reallocation
+  models.Resource:
+    properties:
+      conditions:
+        items:
+          $ref: '#/definitions/v1.Condition'
+        type: array
+      created_at:
+        type: string
+      id:
+        type: string
+      job_id:
+        type: string
+      resource_name:
+        type: string
+      resource_uuid:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Target:
+    properties:
+      cluster_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      node_name:
+        type: string
+      orchestrator:
+        $ref: '#/definitions/models.OrchestratorType'
+      updated_at:
+        type: string
+    type: object
+  v1.Condition:
+    properties:
+      lastTransitionTime:
+        description: |-
+          lastTransitionTime is the last time the condition transitioned from one status to another.
+          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+          +required
+          +kubebuilder:validation:Required
+          +kubebuilder:validation:Type=string
+          +kubebuilder:validation:Format=date-time
+        type: string
+      message:
+        description: |-
+          message is a human readable message indicating details about the transition.
+          This may be an empty string.
+          +required
+          +kubebuilder:validation:Required
+          +kubebuilder:validation:MaxLength=32768
+        type: string
+      observedGeneration:
+        description: |-
+          observedGeneration represents the .metadata.generation that the condition was set based upon.
+          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+          with respect to the current state of the instance.
+          +optional
+          +kubebuilder:validation:Minimum=0
+        type: integer
+      reason:
+        description: |-
+          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+          Producers of specific condition types may define expected values and meanings for this field,
+          and whether the values are considered a guaranteed API.
+          The value should be a CamelCase string.
+          This field may not be empty.
+          +required
+          +kubebuilder:validation:Required
+          +kubebuilder:validation:MaxLength=1024
+          +kubebuilder:validation:MinLength=1
+          +kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/k8s_io_apimachinery_pkg_apis_meta_v1.ConditionStatus'
+        description: |-
+          status of the condition, one of True, False, Unknown.
+          +required
+          +kubebuilder:validation:Required
+          +kubebuilder:validation:Enum=True;False;Unknown
+      type:
+        description: |-
+          type of condition in CamelCase or in foo.example.com/CamelCase.
+          ---
+          Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+          useful (see .node.status.conditions), the ability to deconflict is important.
+          The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+          +required
+          +kubebuilder:validation:Required
+          +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
+          +kubebuilder:validation:MaxLength=316
+        type: string
+    type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -20,45 +221,55 @@ paths:
     get:
       consumes:
       - application/json
-      description: pull and execute jobs
-      operationId: pull-and-execute-jobs
-      parameters:
-      - description: Authentication header
-        in: header
-        name: Authorization
-        required: true
-        type: string
+      description: Pull and execute jobs
       produces:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: List of executed jobs
+          schema:
+            items:
+              $ref: '#/definitions/models.Job'
+            type: array
+        "400":
+          description: Bad Request
           schema:
             type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Pull and execute jobs from job manager
+      tags:
+      - jobs
   /deploy-manager/resource:
     get:
       consumes:
       - application/json
       description: get resource status by id
-      operationId: get-resource-status-by-id
       parameters:
-      - description: Authentication header
-        in: header
-        name: Authorization
-        required: true
-        type: string
       - description: Resource ID
         in: path
         name: uid
+        required: true
+        type: string
+      - description: Resource name
+        in: query
+        name: resource_name
+        required: true
+        type: string
+      - description: Node target
+        in: query
+        name: node_target
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: OK
           schema:
-            type: string
+            $ref: '#/definitions/models.Resource'
         "400":
           description: provided UID is different from the retrieved manifest
           schema:
@@ -71,12 +282,14 @@ paths:
           description: Can not parse UID
           schema:
             type: string
+      summary: Get resource status by id
+      tags:
+      - resources
   /deploy-manager/resource/sync:
     get:
       consumes:
       - application/json
       description: start sync-up
-      operationId: start-sync-up
       parameters:
       - description: Authentication header
         in: header
@@ -90,6 +303,13 @@ paths:
           description: Ok
           schema:
             type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Start sync-up
+      tags:
+      - resources
 securityDefinitions:
   OAuth 2.0:
     type: basic

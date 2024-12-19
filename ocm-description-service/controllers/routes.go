@@ -1,11 +1,11 @@
 /*
-Copyright 2023 Bull SAS
+Copyright 2023-2024 Bull SAS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,18 +17,43 @@ package controllers
 
 import (
 	m "etsn/server/ocm-description-service/middlewares"
+	"etsn/server/ocm-description-service/utils/logs"
+	"net/http"
 )
 
-func (s *Server) initializeRoutes() {
+func (s *Server) initializeRoutes(enableJWT bool) {
 
-	// Home Route
-	s.Router.HandleFunc("/deploy-manager", m.SetMiddlewareLog(m.SetMiddlewareJSON(s.Home))).Methods("GET")
-	//healthcheck
+	middlewares := []func(http.HandlerFunc) http.HandlerFunc{
+		m.SetMiddlewareLog,
+		m.SetMiddlewareJSON,
+	}
+
+	if enableJWT {
+		logs.Logger.Println("JWT Middleware is enabled")
+		middlewares = append(middlewares, m.JWTValidation)
+	} else {
+		logs.Logger.Println("JWT Middleware is disabled")
+	}
+
+	// Home Route - Applies all middlewares
+	s.Router.HandleFunc("/deploy-manager", applyMiddlewares(s.Home, middlewares...)).Methods("GET")
+
+	// Healthcheck Route - Typically no middlewares applied
 	s.Router.HandleFunc("/deploy-manager/healthz", s.HealthCheck).Methods("GET")
-	//ocm-descriptor routes
-	s.Router.HandleFunc("/deploy-manager/execute", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.PullJobs)))).Methods("GET")
-	// get resource (status)
-	s.Router.HandleFunc("/deploy-manager/resource", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.GetResourceStatus)))).Methods("GET")
-	// trigger resource syncup
-	s.Router.HandleFunc("/deploy-manager/resource/sync", m.SetMiddlewareLog(m.SetMiddlewareJSON(m.JWTValidation(s.StartSyncUp)))).Methods("GET")
+
+	// OCM Descriptor Routes - Applies all middlewares
+	s.Router.HandleFunc("/deploy-manager/execute", applyMiddlewares(s.PullJobs, middlewares...)).Methods("GET")
+
+	// Get Resource (Status) Route - Applies all middlewares
+	s.Router.HandleFunc("/deploy-manager/resource", applyMiddlewares(s.GetResourceStatus, middlewares...)).Methods("GET")
+
+	// Trigger Resource Syncup Route - Applies all middlewares
+	s.Router.HandleFunc("/deploy-manager/resource/sync", applyMiddlewares(s.StartSyncUp, middlewares...)).Methods("GET")
+}
+
+func applyMiddlewares(handler http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
+	for _, middleware := range middlewares {
+		handler = middleware(handler)
+	}
+	return handler
 }

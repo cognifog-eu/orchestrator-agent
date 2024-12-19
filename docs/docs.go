@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Bull SAS
+Copyright 2023-2024 Bull SAS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,26 +41,35 @@ const docTemplate = `{
     "paths": {
         "/deploy-manager/execute": {
             "get": {
-                "description": "pull and execute jobs",
+                "description": "Pull and execute jobs",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "operationId": "pull-and-execute-jobs",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Authentication header",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
+                "tags": [
+                    "jobs"
                 ],
+                "summary": "Pull and execute jobs from job manager",
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "List of executed jobs",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Job"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -77,28 +86,38 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "operationId": "get-resource-status-by-id",
+                "tags": [
+                    "resources"
+                ],
+                "summary": "Get resource status by id",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Authentication header",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "Resource ID",
                         "name": "uid",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource name",
+                        "name": "resource_name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Node target",
+                        "name": "node_target",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/models.Resource"
                         }
                     },
                     "400": {
@@ -131,7 +150,10 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "operationId": "start-sync-up",
+                "tags": [
+                    "resources"
+                ],
+                "summary": "Start sync-up",
                 "parameters": [
                     {
                         "type": "string",
@@ -147,7 +169,247 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "k8s_io_apimachinery_pkg_apis_meta_v1.ConditionStatus": {
+            "type": "string",
+            "enum": [
+                "True",
+                "False",
+                "Unknown"
+            ],
+            "x-enum-varnames": [
+                "ConditionTrue",
+                "ConditionFalse",
+                "ConditionUnknown"
+            ]
+        },
+        "models.Job": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_group_description": {
+                    "type": "string"
+                },
+                "job_group_id": {
+                    "type": "string"
+                },
+                "job_group_name": {
+                    "type": "string"
+                },
+                "manifests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PlainManifest"
+                    }
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "orchestrator": {
+                    "description": "Locker              *bool            ` + "`" + `json:\"locker,omitempty\"` + "`" + `",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.OrchestratorType"
+                        }
+                    ]
+                },
+                "owner_id": {
+                    "description": "ResourceUID         string           ` + "`" + `json:\"uuid,omitempty\"` + "`" + `",
+                    "type": "string"
+                },
+                "resource": {
+                    "$ref": "#/definitions/models.Resource"
+                },
+                "state": {
+                    "$ref": "#/definitions/models.JobState"
+                },
+                "sub_type": {
+                    "$ref": "#/definitions/models.RemediationType"
+                },
+                "targets": {
+                    "$ref": "#/definitions/models.Target"
+                },
+                "type": {
+                    "$ref": "#/definitions/models.JobType"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.JobState": {
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                3,
+                4
+            ],
+            "x-enum-varnames": [
+                "Applied",
+                "Progressing",
+                "Available",
+                "Degraded"
+            ]
+        },
+        "models.JobType": {
+            "type": "integer",
+            "enum": [
+                5,
+                6,
+                7,
+                8
+            ],
+            "x-enum-varnames": [
+                "CreateDeployment",
+                "DeleteDeployment",
+                "UpdateDeployment",
+                "ReplaceDeployment"
+            ]
+        },
+        "models.OrchestratorType": {
+            "type": "string",
+            "enum": [
+                "ocm",
+                "nuvla"
+            ],
+            "x-enum-varnames": [
+                "OCM",
+                "NUVLA"
+            ]
+        },
+        "models.PlainManifest": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "yamlString": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.RemediationType": {
+            "type": "string",
+            "enum": [
+                "scale-up",
+                "scale-down",
+                "scale-out",
+                "scale-in",
+                "reallocation"
+            ],
+            "x-enum-varnames": [
+                "ScaleUp",
+                "ScaleDown",
+                "ScaleOut",
+                "ScaleIn",
+                "Reallocation"
+            ]
+        },
+        "models.Resource": {
+            "type": "object",
+            "properties": {
+                "conditions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.Condition"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "resource_name": {
+                    "type": "string"
+                },
+                "resource_uuid": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Target": {
+            "type": "object",
+            "properties": {
+                "cluster_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "node_name": {
+                    "type": "string"
+                },
+                "orchestrator": {
+                    "$ref": "#/definitions/models.OrchestratorType"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.Condition": {
+            "type": "object",
+            "properties": {
+                "lastTransitionTime": {
+                    "description": "lastTransitionTime is the last time the condition transitioned from one status to another.\nThis should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Type=string\n+kubebuilder:validation:Format=date-time",
+                    "type": "string"
+                },
+                "message": {
+                    "description": "message is a human readable message indicating details about the transition.\nThis may be an empty string.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:MaxLength=32768",
+                    "type": "string"
+                },
+                "observedGeneration": {
+                    "description": "observedGeneration represents the .metadata.generation that the condition was set based upon.\nFor instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date\nwith respect to the current state of the instance.\n+optional\n+kubebuilder:validation:Minimum=0",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "reason contains a programmatic identifier indicating the reason for the condition's last transition.\nProducers of specific condition types may define expected values and meanings for this field,\nand whether the values are considered a guaranteed API.\nThe value should be a CamelCase string.\nThis field may not be empty.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:MaxLength=1024\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Pattern=` + "`" + `^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$` + "`" + `",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "status of the condition, one of True, False, Unknown.\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Enum=True;False;Unknown",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/k8s_io_apimachinery_pkg_apis_meta_v1.ConditionStatus"
+                        }
+                    ]
+                },
+                "type": {
+                    "description": "type of condition in CamelCase or in foo.example.com/CamelCase.\n---\nMany .condition.type values are consistent across resources like Available, but because arbitrary conditions can be\nuseful (see .node.status.conditions), the ability to deconflict is important.\nThe regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Pattern=` + "`" + `^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$` + "`" + `\n+kubebuilder:validation:MaxLength=316",
+                    "type": "string"
                 }
             }
         }
