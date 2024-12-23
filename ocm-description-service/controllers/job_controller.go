@@ -28,10 +28,7 @@ import (
 )
 
 var (
-	jobmanagerBaseURL = os.Getenv("JOBMANAGER_URL") // "http://10.160.3.20:32300/"
-	// lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
-	// apiV3              = "/api/v3"
-	// matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
+	jobmanagerBaseURL = os.Getenv("JOBMANAGER_URL")
 )
 
 // PullJobs example
