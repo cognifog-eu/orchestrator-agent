@@ -17,8 +17,6 @@ fullnameOverride: ""
 
 configMap:
   serverPort: 8083 # not needed
-  lighthouseBaseUrl: http://lighthouse:8080
-  matchmakingUrl: ""
   keycloakPublicKey: ""
   jobManagerUrl: http://jobmanager:8082 # same cluster and namespace as jobmanager service
 

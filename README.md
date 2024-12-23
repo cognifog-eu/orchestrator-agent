@@ -13,8 +13,6 @@ Swagger Documentation is implemented into the asset. It may be found in the `doc
 | Variable         | Description     |
 | ---------------- | --------------- |
 | JOBMANAGER_URL        | Upstream jobmanager URL to retrieve applications to be deployed           |
-| LIGHTHOUSE_BASE_URL          | For future use      |
-| MATCHMAKING_URL          | For future use             |
 
 ## Run application
 

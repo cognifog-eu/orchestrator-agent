@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Bull SAS
+Copyright 2023-2024 Bull SAS
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,121 +17,150 @@ package controllers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"etsn/server/ocm-description-service/models"
 	"etsn/server/ocm-description-service/responses"
 	"etsn/server/ocm-description-service/utils/logs"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 )
 
 var (
-	jobmanagerBaseURL = os.Getenv("JOBMANAGER_URL") // "http://jobmanager-service:8082"
-	// lighthouseBaseURL  = os.Getenv("LIGHTHOUSE_BASE_URL")
-	// apiV3              = "/api/v3"
-	// matchmackerBaseURL = os.Getenv("MATCHMAKING_URL")
+	jobmanagerBaseURL = os.Getenv("JOBMANAGER_URL")
 )
 
 // PullJobs example
 //
-//	@Description	pull and execute jobs
-//	@ID				pull-and-execute-jobs
-//	@Accept			json
-//	@Produce		json
-//	@Param			Authorization	header		string	true	"Authentication header"
-//	@Success		200				{string}	string	"Ok"
-//	@Router			/deploy-manager/execute [get]
+// @Summary		Pull and execute jobs from job manager
+// @Description	Pull and execute jobs
+// @Tags			jobs
+// @Accept			json
+// @Produce			json
+// @Success		200				{array}		models.Job "List of executed jobs"
+// @Failure		400				{object}	string	"Bad Request"
+// @Failure		500				{object}	string	"Internal Server Error"
+// @Router			/deploy-manager/execute [get]
 func (server *Server) PullJobs(w http.ResponseWriter, r *http.Request) {
-
+	ctx := r.Context()
 	jobs := []models.Job{}
-	// get jobs with specific state; CREATED for now
-	logs.Logger.Println("Requesting Jobs...")
-	reqJobs, err := http.NewRequest("GET", jobmanagerBaseURL+"/jobmanager/jobs/executable/orchestrator/ocm", http.NoBody)
+
+	if err := models.InClusterConfig(); err != nil {
+		logs.Logger.Println("Kubeconfig error occurred:", err)
+	}
+
+	ownerId, err := models.FetchClusterManagerUID("cluster-manager")
 	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		logs.Logger.Println("Error fetching cluster manager UID:", err)
+		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
 	}
-	logs.Logger.Println("GET Request to Job Manager being created: ")
-	logs.Logger.Println(reqJobs.URL)
-	// add bearer
-	reqJobs.Header.Add("Authorization", r.Header.Get("Authorization"))
 
-	// do request
-	client := &http.Client{}
-	respJobs, err := client.Do(reqJobs)
+	respJobs, err := getExecutableJobs(ctx, w, r, ownerId)
 	if err != nil {
-		logs.Logger.Println("ERROR " + err.Error())
-		responses.ERROR(w, http.StatusServiceUnavailable, err)
+		logs.Logger.Println("Error getting executable jobs:", err)
 		return
 	}
 	defer respJobs.Body.Close()
 
 	bodyJobs, err := io.ReadAll(respJobs.Body)
 	if err != nil {
-		logs.Logger.Println("ERROR " + err.Error())
+		logs.Logger.Println("Error reading response body:", err)
 		responses.ERROR(w, http.StatusBadRequest, err)
 		return
 	}
-	logs.Logger.Println("Job's body: " + string(bodyJobs))
-	err = json.Unmarshal(bodyJobs, &jobs)
-	if err != nil {
-		logs.Logger.Println("ERROR " + err.Error())
+	logs.Logger.Println("Job's body:", string(bodyJobs))
+
+	if err = json.Unmarshal(bodyJobs, &jobs); err != nil {
+		logs.Logger.Println("Error unmarshaling response body:", err)
 		responses.ERROR(w, respJobs.StatusCode, err)
 		return
 	}
 
-	// create the in-cluster config
-	err = models.InClusterConfig()
-	if err != nil {
-		logs.Logger.Println("Kubeconfig error occured", err)
-	}
-	// for each job, call exec
-	for _, job := range jobs {
-		// execute job -> creates manifestWork and deploy it, update UID, State, locker=false -> unlocked
-		logs.Logger.Println("Executing Job: " + job.ID.String())
-		if len(job.Targets) < 1 {
-			logs.Logger.Println("No target were provided...")
-		} else {
-			job, err := models.Execute(&job)
-			if err != nil {
-				logs.Logger.Println("Error occurred during Job execution...")
-			}
-			// HTTP PUT to update UUIDs, State into JOB MANAGER -> updateJob call
-			logs.Logger.Println("Job executed, sending details to Job Manager...")
-			jobBody, err := json.Marshal(job)
-			if err != nil {
-				logs.Logger.Println("Could not unmarshall job...", err)
-			}
-			fmt.Printf("Job details: %#v", job)
-			reqState, err := http.NewRequest("PUT", jobmanagerBaseURL+"/jobmanager/jobs/"+job.ID.String(), bytes.NewReader(jobBody))
-			query := reqState.URL.Query()
-			query.Add("uuid", job.UUID.String())
-			query.Add("orchestrator", "ocm")
-			query.Encode()
-			logs.Logger.Println("PUT Request to Job Manager being created: ")
-			logs.Logger.Println(reqState.URL)
-
-			reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
-			if err != nil {
-				responses.ERROR(w, http.StatusUnprocessableEntity, err)
-				return
-			}
-			// do request
-			client2 := &http.Client{}
-			resp, err := client2.Do(reqState)
-			fmt.Println("Update Job Request " + logs.FormatRequest(reqState))
-			logs.Logger.Println("Update Job Response " + resp.Status)
-			if err != nil {
-				logs.Logger.Println("Error occurred during Job details notification...")
-				responses.ERROR(w, resp.StatusCode, err)
-				// TODO retry? rollback?
-				// keep executing
-			}
-			defer reqState.Body.Close()
-		}
-	}
-	// TODO: update the jobs list with updated jobs
+	executeJobs(ctx, jobs, w, r, ownerId)
 	responses.JSON(w, http.StatusOK, jobs)
+}
+
+func getExecutableJobs(ctx context.Context, w http.ResponseWriter, r *http.Request, ownerId string) (*http.Response, error) {
+	logs.Logger.Println("Requesting Jobs...")
+	reqJobs, err := http.NewRequestWithContext(ctx, "GET", jobmanagerBaseURL+"jobmanager/jobs/executable/ocm/"+ownerId, http.NoBody)
+	if err != nil {
+		logs.Logger.Println("Error creating new request:", err)
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return nil, err
+	}
+	reqJobs.Header.Add("Authorization", r.Header.Get("Authorization"))
+
+	client := &http.Client{}
+	respJobs, err := client.Do(reqJobs)
+	if err != nil {
+		logs.Logger.Println("Error performing request to job manager:", err)
+		responses.ERROR(w, http.StatusServiceUnavailable, err)
+		return nil, err
+	}
+	return respJobs, nil
+}
+
+func executeJobs(ctx context.Context, jobs []models.Job, w http.ResponseWriter, r *http.Request, ownerId string) {
+	for i := range jobs {
+		job := &jobs[i]
+		logs.Logger.Println("Executing Job:", job.ID)
+
+		if job.Target.NodeName == "" {
+			logs.Logger.Println("No targets were provided")
+			continue
+		}
+
+		job.OwnerID = ownerId
+		if err := job.PromoteJob(r.Header.Get("Authorization"), job.OwnerID); err != nil {
+			logs.Logger.Println("Error promoting job:", err)
+			responses.ERROR(w, http.StatusUnprocessableEntity, err)
+			continue
+		}
+
+		executedJob, err := models.Execute(job)
+		if err != nil {
+			logs.Logger.Println("Error executing job:", err)
+			// responses.ERROR(w, http.StatusUnprocessableEntity, err)
+			continue
+		}
+
+		*job = *executedJob
+
+		jobBody, err := json.Marshal(job)
+		if err != nil {
+			logs.Logger.Println("Error marshaling job:", err)
+			continue
+		}
+
+		updateJob(ctx, job, w, r, jobBody)
+	}
+}
+
+func updateJob(ctx context.Context, job *models.Job, w http.ResponseWriter, r *http.Request, jobBody []byte) {
+	reqState, err := http.NewRequestWithContext(ctx, "PUT", jobmanagerBaseURL+"jobmanager/jobs", bytes.NewReader(jobBody))
+	if err != nil {
+		logs.Logger.Println("Error creating update job request:", err)
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	query := reqState.URL.Query()
+	query.Add("id", job.ID)
+	query.Add("orchestrator", "ocm")
+	reqState.URL.RawQuery = query.Encode()
+
+	reqState.Header.Add("Authorization", r.Header.Get("Authorization"))
+
+	client := &http.Client{}
+	resp, err := client.Do(reqState)
+	if err != nil {
+		logs.Logger.Println("Error performing update job request:", err)
+		responses.ERROR(w, http.StatusServiceUnavailable, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	logs.Logger.Println("Update Job Response:", resp.Status)
 }
