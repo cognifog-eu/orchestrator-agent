@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "ocm-descriptor.name" -}}
+{{- define "deploy-manager.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "ocm-descriptor.fullname" -}}
+{{- define "deploy-manager.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "ocm-descriptor.chart" -}}
+{{- define "deploy-manager.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "ocm-descriptor.labels" -}}
-helm.sh/chart: {{ include "ocm-descriptor.chart" . }}
-{{ include "ocm-descriptor.selectorLabels" . }}
+{{- define "deploy-manager.labels" -}}
+helm.sh/chart: {{ include "deploy-manager.chart" . }}
+{{ include "deploy-manager.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "ocm-descriptor.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ocm-descriptor.name" . }}
+{{- define "deploy-manager.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "deploy-manager.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "ocm-descriptor.serviceAccountName" -}}
+{{- define "deploy-manager.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "ocm-descriptor.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "deploy-manager.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

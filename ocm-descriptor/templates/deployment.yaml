@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "ocm-descriptor.fullname" . }}
+  name: {{ include "deploy-manager.fullname" . }}
   labels:
-    {{- include "ocm-descriptor.labels" . | nindent 4 }}
+    {{- include "deploy-manager.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "ocm-descriptor.selectorLabels" . | nindent 6 }}
+      {{- include "deploy-manager.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,13 +18,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "ocm-descriptor.selectorLabels" . | nindent 8 }}
+        {{- include "deploy-manager.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets | default .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "ocm-descriptor.serviceAccountName" . }}
+      serviceAccountName: {{ include "deploy-manager.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -35,7 +35,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           envFrom:
           - configMapRef:
-              name: {{ .Release.Name }}-configmap
+              name: {{ include "deploy-manager.fullname" . }}-configmap
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -50,6 +50,18 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+         {{- if .Values.sidecar.enabled }} 
+        - name: {{ .Values.sidecar.name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.sidecar.image.repository }}:{{ .Values.sidecar.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.sidecar.image.pullPolicy }}
+          envFrom:
+          - configMapRef:
+              name: {{ include "deploy-manager.fullname" . }}-configmap
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -1,8 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-configmap
+  name: {{ include "deploy-manager.fullname" . }}-configmap
 data:
-  SERVER_PORT: {{ .Values.configMap.serverPort | quote }}
-  KEYCLOAK_PUBLIC_KEY: {{ .Values.configMap.keycloakPublicKey | quote }}
   JOBMANAGER_URL: {{ .Values.configMap.jobManagerUrl | quote }}
+  KEYCLOAK_PUBLIC_KEY: {{ default .Values.global.keycloakPublicKey .Values.configMap.keycloakPublicKey | quote }}
+  DEPLOY_MANAGER_URL: {{ tpl .Values.configMap.deployManagerUrl . | quote }}
+  DEPLOY_MANAGER_PULLING_INVERVAL: {{ tpl .Values.configMap.deployManagerPullingInverval . | quote }}
+  ENVIRONMENT: {{ default .Values.global.environment .Values.configMap.environment | quote }}

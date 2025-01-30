@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "ocm-descriptor.fullname" . }}
+  name: {{ include "deploy-manager.fullname" . }}
   labels:
-    {{- include "ocm-descriptor.labels" . | nindent 4 }}
+    {{- include "deploy-manager.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "ocm-descriptor.fullname" . }}
+    name: {{ include "deploy-manager.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

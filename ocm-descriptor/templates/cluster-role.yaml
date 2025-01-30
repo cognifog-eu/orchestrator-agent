@@ -20,6 +20,14 @@ rules:
       - watch
       - list
     apiGroups:
-      - managedclusters.cluster.open-cluster-management.io
+      - cluster.open-cluster-management.io
     resources:
       - managedclusters
+  - verbs:
+      - get
+      - watch
+      - list
+    apiGroups:
+      - operator.open-cluster-management.io
+    resources:
+      - clustermanagers
