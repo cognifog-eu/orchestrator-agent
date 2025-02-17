@@ -208,6 +208,8 @@ type KubernetesJobStatus struct {
 // Configuration and Initialization
 // ------------------------------------------------)
 
+var kubeconfig *string
+
 // InClusterConfig sets up Kubernetes client configurations for in-cluster and out-of-cluster environments.
 func InClusterConfig() error {
 	config, err := rest.InClusterConfig()
@@ -215,12 +217,21 @@ func InClusterConfig() error {
 	// Outside of the cluster for development
 	if err != nil {
 		//panic(err.Error())
-		var kubeconfig *string
 		logs.Logger.Println("The home folder is: ", homedir.HomeDir())
 		if home := homedir.HomeDir(); home != "" {
-			kubeconfig = flag.String("kubeconfig", "/home/mgallardo/.kube/config", "absolute path to the kubeconfig file")
+			if kubeconfig == nil {
+				if flag.Lookup("kubeconfig") == nil {
+					kubeconfig = flag.String("kubeconfig", "/home/dev/.kube/config-k3s-master1", "absolute path to the kubeconfig file")
+				} else {
+					kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+				}
+			}
 		} else {
-			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+			if kubeconfig == nil {
+				if flag.Lookup("kubeconfig") == nil {
+					kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+				}
+			}
 		}
 		flag.Parse()
 		// use the current context in kubeconfig
