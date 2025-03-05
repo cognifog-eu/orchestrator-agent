@@ -28,6 +28,8 @@ import (
 	"text/template"
 	"time"
 
+	qosv1alpha1 "siemens.com/qos-scheduler/scheduler/api/v1alpha1"
+
 	//yaml "gopkg.in/yaml.v2"
 	"github.com/google/uuid"
 	"github.com/mattn/go-shellwords"
@@ -1216,6 +1218,7 @@ func decodeYAMLToObject(yamlString string) (runtime.Object, error) {
 	appsv1.AddToScheme(scheme)
 	corev1.AddToScheme(scheme)
 	batchv1.AddToScheme(scheme)
+	qosv1alpha1.AddToScheme(scheme)
 
 	codecFactory := serializer.NewCodecFactory(scheme)
 	decoder := codecFactory.UniversalDeserializer()
