@@ -1111,10 +1111,18 @@ func updateNamespaceAndAnnotations(obj runtime.Object, namespace, componentName,
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
+	labels := metaObj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 
 	annotations["app.cognifog.eu/component"] = componentName
 	annotations["app.cognifog.eu/instance"] = jobGroupID
 	metaObj.SetAnnotations(annotations)
+
+	labels["app.cognifog.eu/component"] = componentName
+	labels["app.cognifog.eu/instance"] = jobGroupID
+	metaObj.SetLabels(labels)
 }
 
 // Deployment Attribute Updates
