@@ -1,0 +1,58 @@
+pipeline {
+    agent {
+        node {
+            label 'jenkins-agent'
+        }
+    }
+    environment {
+        APP_NAME = "orchestrator-agent"
+        APP_URL = "116.203.86.95:30006"
+        MAJOR_RELEASE = 0.1
+        DOCKER_TAG = "${MAJOR_RELEASE}.${env.BUILD_NUMBER}"
+        DOCKER_REG = "harbor.cognifog.rid-intrasoft.eu"
+        DOCKER_REPO = "/demo-source/"
+        DOCKER_REG_CREDS = "jenkins-harbor-creds"
+    }
+
+    stages {
+        // **************
+        // *** Deploy ***
+        // **************
+        stage("Deployment"){
+            when {
+                environment name: "GIT_BRANCH", value: "origin/cognifog/cicd"
+            }
+
+            steps {
+                withKubeConfig([credentialsId: 'k8s-jenkins']) {
+                    sh '''
+                    kubectl apply -f jenkins/manifests.yaml -n cognifog-dev
+                    '''
+               }
+            }
+        }
+        // **************************
+        // *** Clean Up Resources ***
+        // **************************
+/*         stage("Clean Up Docker Resources"){
+            steps {
+                sh '''
+                docker image rm ${DOCKER_REG}${DOCKER_REPO}${APP_NAME}:${DOCKER_TAG} || true
+                docker image rm ${DOCKER_REG}${DOCKER_REPO}${APP_NAME}:latest || true
+                docker image rm ${DOCKER_REG}${DOCKER_REPO}${APP_NAME}:test || true
+                '''
+            }
+           } */
+    }
+    // post{
+        // failure{
+        //     // slackSend (color: "#FF0000", message: "Job FAILED: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+        //     sh 'docker image rm ${APP_NAME}:test &> /dev/null || True'
+        //     sh 'DOCKER_TAG=test docker compose down --rmi all'
+        // }
+
+        // success{
+        //     slackSend (color: "#008000", message: "Job SUCCESSFUL: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})")
+        // }
+    // }
+}

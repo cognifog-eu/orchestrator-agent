@@ -14,3 +14,7 @@ install:
 
 uninstall:
 	helm uninstall ocm-descriptor -n jobmanager
+
+template:
+	helm template --name-template ocm-descriptor ocm-descriptor/ -n cognifog-dev \
+	>> jenkins/manifests.yaml

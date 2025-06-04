@@ -1,0 +1,179 @@
+---
+# Source: ocm-descriptor/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: manifestwork-editor-service-account
+  labels:
+    helm.sh/chart: ocm-descriptor-0.1.0
+    app.kubernetes.io/name: ocm-descriptor
+    app.kubernetes.io/instance: ocm-descriptor
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: ocm-descriptor/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocm-descriptor-configmap
+data:
+  JOBMANAGER_URL: "http://jobmanager:8082/"
+  KEYCLOAK_PUBLIC_KEY: 
+  DEPLOY_MANAGER_URL: "http://localhost:8083/deploy-manager"
+  DEPLOY_MANAGER_PULLING_INVERVAL: "1"
+  ENVIRONMENT: "development"
+---
+# Source: ocm-descriptor/templates/cluster-role.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: manifestwork-editor-role
+rules:
+  - verbs:
+      - get
+      - watch
+      - list
+      - create
+      - update
+      - delete
+      - patch
+    apiGroups:
+      - work.open-cluster-management.io
+    resources:
+      - manifestworks
+  - verbs:
+      - get
+      - watch
+      - list
+    apiGroups:
+      - cluster.open-cluster-management.io
+    resources:
+      - managedclusters
+  - verbs:
+      - get
+      - watch
+      - list
+    apiGroups:
+      - operator.open-cluster-management.io
+    resources:
+      - clustermanagers
+---
+# Source: ocm-descriptor/templates/cluster-role-binding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: manifestwork-editor-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: manifestwork-editor-service-account
+    namespace: cognifog-dev
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: manifestwork-editor-role
+---
+# Source: ocm-descriptor/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocm-descriptor
+  labels:
+    helm.sh/chart: ocm-descriptor-0.1.0
+    app.kubernetes.io/name: ocm-descriptor
+    app.kubernetes.io/instance: ocm-descriptor
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8083
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: ocm-descriptor
+    app.kubernetes.io/instance: ocm-descriptor
+---
+# Source: ocm-descriptor/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocm-descriptor
+  labels:
+    helm.sh/chart: ocm-descriptor-0.1.0
+    app.kubernetes.io/name: ocm-descriptor
+    app.kubernetes.io/instance: ocm-descriptor
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ocm-descriptor
+      app.kubernetes.io/instance: ocm-descriptor
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ocm-descriptor
+        app.kubernetes.io/instance: ocm-descriptor
+    spec:
+      imagePullSecrets:
+        - name: cognifog-harbor-secret
+      serviceAccountName: manifestwork-editor-service-account
+      securityContext:
+        {}
+      containers:
+        - name: ocm-descriptor
+          securityContext:
+            {}
+          image: "harbor.cognifog.rid-intrasoft.eu/orchestrator-agent/orch-agent-ocm-description-svc:dev"
+          imagePullPolicy: Always
+          envFrom:
+          - configMapRef:
+              name: ocm-descriptor-configmap
+          ports:
+            - name: http
+              containerPort: 8083
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /deploy-manager/healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /deploy-manager/healthz
+              port: http
+          resources:
+            {} 
+        - name: deploy-manager-sidecar
+          securityContext:
+            {}
+          image: "harbor.cognifog.rid-intrasoft.eu/orchestrator-agent/orch-agent-ocm-descriptor-sidecar:latest"
+          imagePullPolicy: Always
+          envFrom:
+          - configMapRef:
+              name: ocm-descriptor-configmap
+          resources:
+            {}
+---
+# Source: ocm-descriptor/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "ocm-descriptor-test-connection"
+  labels:
+    helm.sh/chart: ocm-descriptor-0.1.0
+    app.kubernetes.io/name: ocm-descriptor
+    app.kubernetes.io/instance: ocm-descriptor
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['ocm-descriptor:8083/deploy-manager/healthz']
+  restartPolicy: Never
+---
